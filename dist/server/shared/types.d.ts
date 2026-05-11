@@ -49,6 +49,7 @@ export interface ProjectState {
     epics: Epic[];
     sprint: SprintStatus | null;
     config: BmadConfig | null;
+    recentActions: RecentAction[];
 }
 export interface TriggerCode {
     code: string;
@@ -148,4 +149,10 @@ export interface ParallelOutput {
 export interface NavigationState {
     view: ViewId;
     params?: Record<string, string>;
+}
+export interface RecentAction {
+    id: string;
+    action: string;
+    target: string;
+    timestamp: string;
 }

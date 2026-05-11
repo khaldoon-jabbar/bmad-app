@@ -22,21 +22,30 @@ export function DocsView({ callTool }: DocsViewProps) {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    callTool('bmad_docs', { document: selected }).then(res => {
-      if (active) {
-        const text = res?.content || '*No content found.*';
-        setContent(text);
-        setAllContents(prev => ({ ...prev, [selected]: text }));
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (active) {
-        setContent('*Failed to load document.*');
-        setLoading(false);
-      }
+    DOCS.forEach(doc => {
+      callTool('bmad_docs', { document: doc.id }).then(res => {
+        if (active && res?.content) {
+          setAllContents(prev => ({ ...prev, [doc.id]: res.content }));
+        }
+      }).catch(() => {});
     });
     return () => { active = false; };
+  }, [callTool]);
+
+  useEffect(() => {
+    const cached = allContents[selected];
+    if (cached) {
+      setContent(cached);
+      return;
+    }
+    setLoading(true);
+    callTool('bmad_docs', { document: selected }).then(res => {
+      const text = res?.content || '*No content found.*';
+      setContent(text);
+      setAllContents(prev => ({ ...prev, [selected]: text }));
+    }).catch(() => {
+      setContent('*Failed to load document.*');
+    }).finally(() => setLoading(false));
   }, [selected, callTool]);
 
   const filteredDocs = DOCS.filter(d => {

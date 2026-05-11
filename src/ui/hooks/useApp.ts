@@ -18,7 +18,12 @@ export function useBmadApp() {
     setIsLoading(true);
     try {
       const result = await app.callServerTool({ name, arguments: args });
-      return result.structuredContent;
+      if (result.structuredContent) return result.structuredContent;
+      const textItem = (result as any).content?.find((c: any) => c.type === 'text');
+      if (textItem?.text) {
+        try { return JSON.parse(textItem.text); } catch { return textItem.text; }
+      }
+      return result;
     } finally {
       setIsLoading(false);
     }

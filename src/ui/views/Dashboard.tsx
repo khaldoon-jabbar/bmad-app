@@ -18,7 +18,8 @@ const mockState: ProjectState = {
     { id: 'E-1', title: 'User Auth', status: 'in-progress', description: '', stories: [{slug: '1', title: '', status: 'done', epicId: 'E-1', acceptanceCriteria: [], dependencies: [], content: ''}, {slug: '2', title: '', status: 'draft', epicId: 'E-1', acceptanceCriteria: [], dependencies: [], content: ''}] }
   ],
   sprint: { number: 1, status: 'active', started: '2024-01-01', epics: [] },
-  config: { projectName: 'Mock Project', track: 'bmad', createdAt: '2024-01-01' }
+  config: { projectName: 'Mock Project', track: 'bmad', createdAt: '2024-01-01' },
+  recentActions: [],
 };
 
 export function Dashboard({ projectState, navigate }: DashboardProps) {
@@ -81,16 +82,16 @@ export function Dashboard({ projectState, navigate }: DashboardProps) {
       <div>
         <h2 className="text-xl font-bold mb-4 text-gray-100">Recent Activity</h2>
         <div className="bg-gray-800 rounded-lg border border-gray-700 divide-y divide-gray-700">
-          {state.epics.flatMap(e => e.stories).slice(0, 5).map((story, i) => (
-            <div key={story.slug || i} className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-750" onClick={() => navigate('story-detail', { slug: story.slug })}>
+          {(state.recentActions || []).slice(0, 5).map((action, i) => (
+            <div key={action.id + i} className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-3">
-                <span className="text-gray-500 text-xs font-mono">{story.epicId}</span>
-                <span className="text-gray-200 text-sm">{story.title || story.slug}</span>
+                <span className="text-blue-400 text-sm font-medium">{action.action}</span>
+                <span className="text-gray-200 text-sm">{action.target}</span>
               </div>
-              <StatusBadge status={story.status} />
+              <span className="text-gray-500 text-xs">{new Date(action.timestamp).toLocaleDateString()}</span>
             </div>
           ))}
-          {state.epics.flatMap(e => e.stories).length === 0 && (
+          {(!state.recentActions || state.recentActions.length === 0) && (
             <div className="px-4 py-3 text-gray-500 text-sm">No recent activity.</div>
           )}
         </div>
