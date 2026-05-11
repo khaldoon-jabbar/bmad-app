@@ -4,7 +4,7 @@ export type StoryStatus = 'draft' | 'in-progress' | 'review' | 'done' | 'blocked
 export type EpicStatus = 'draft' | 'in-progress' | 'done';
 export type SprintStatusType = 'planning' | 'active' | 'complete';
 export type FlowNodeStatus = 'done' | 'active' | 'in-progress' | 'pending';
-export type ViewId = 'dashboard' | 'phase' | 'sprint-board' | 'epic-detail' | 'story-detail' | 'quick-mode' | 'docs' | 'agent-roster' | 'flow-diagram';
+export type ViewId = 'dashboard' | 'phase' | 'sprint-board' | 'epic-detail' | 'story-detail' | 'quick-mode' | 'docs' | 'agent-roster' | 'flow-diagram' | 'parallel';
 export interface AcceptanceCriterion {
     id: string;
     description: string;

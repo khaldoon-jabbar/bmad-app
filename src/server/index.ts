@@ -43,7 +43,8 @@ server.registerTool(
     _meta: { ui: { resourceUri: UI_RESOURCE_URI } },
   },
   async (args) => {
-    const result = await handleOrchestrate(args, process.cwd());
+    const sampling = { createMessage: (params: any) => server.server.createMessage(params) };
+    const result = await handleOrchestrate(args, process.cwd(), sampling);
     return { content: [{ type: 'text', text: JSON.stringify(result) }] };
   },
 );

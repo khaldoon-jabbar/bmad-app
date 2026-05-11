@@ -9,12 +9,25 @@ interface StoryDetailProps {
   slug: string;
   projectState: ProjectState | null;
   navigate: (view: ViewId, params?: Record<string, string>) => void;
+  callTool: (name: string, args: any) => Promise<any>;
 }
 
-export function StoryDetail({ slug, projectState, navigate }: StoryDetailProps) {
+export function StoryDetail({ slug, projectState, navigate, callTool }: StoryDetailProps) {
   const story = projectState?.epics.flatMap(e => e.stories).find(s => s.slug === slug);
 
   if (!story) return <div className="p-6 text-red-500">Story not found</div>;
+
+  const handleStartStory = () => {
+    callTool('bmad_orchestrate', { skill: 'bmad-agent-dev', triggerCode: 'DS', context: { storySlug: story.slug, epicId: story.epicId } });
+  };
+
+  const handleCodeReview = () => {
+    callTool('bmad_orchestrate', { skill: 'bmad-agent-dev', triggerCode: 'CR', context: { storySlug: story.slug, epicId: story.epicId } });
+  };
+
+  const handleDevStory = () => {
+    callTool('bmad_orchestrate', { skill: 'bmad-agent-dev', triggerCode: 'DS', context: { storySlug: story.slug, epicId: story.epicId } });
+  };
 
   return (
     <div className="p-6 max-w-4xl mx-auto flex flex-col gap-6">
@@ -29,9 +42,9 @@ export function StoryDetail({ slug, projectState, navigate }: StoryDetailProps) 
           </span>
         </div>
         <div className="flex gap-2">
-          {story.status === 'draft' && <ActionButton>Start Story</ActionButton>}
-          {story.status === 'in-progress' && <ActionButton>Code Review</ActionButton>}
-          <ActionButton variant="secondary">Dev Story</ActionButton>
+          {story.status === 'draft' && <ActionButton onClick={handleStartStory}>Start Story</ActionButton>}
+          {story.status === 'in-progress' && <ActionButton onClick={handleCodeReview}>Code Review</ActionButton>}
+          <ActionButton variant="secondary" onClick={handleDevStory}>Dev Story</ActionButton>
         </div>
       </div>
 

@@ -32,7 +32,8 @@ server.registerTool('bmad_orchestrate', {
     },
     _meta: { ui: { resourceUri: UI_RESOURCE_URI } },
 }, async (args) => {
-    const result = await handleOrchestrate(args, process.cwd());
+    const sampling = { createMessage: (params) => server.server.createMessage(params) };
+    const result = await handleOrchestrate(args, process.cwd(), sampling);
     return { content: [{ type: 'text', text: JSON.stringify(result) }] };
 });
 server.registerTool('bmad_quick', {

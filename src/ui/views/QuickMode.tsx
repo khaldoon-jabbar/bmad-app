@@ -16,7 +16,7 @@ export function QuickMode({ callTool }: QuickModeProps) {
     if (!intent.trim()) return;
     setLoading(true);
     try {
-      const res = await callTool('bmad_quick_mode', { intent });
+      const res = await callTool('bmad_quick', { intent });
       if (res && res.message) {
         setResult(res.message);
       }

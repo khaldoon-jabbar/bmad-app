@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ReactFlow, ReactFlowProvider, Controls, MiniMap, Background, useNodesState, useEdgesState, Panel, Node, Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import dagre from '@dagrejs/dagre';
-import { Track } from '../../shared/types';
+import { Track, FlowGraph, FlowNodeStatus } from '../../shared/types';
 import { ActionButton } from '../components/ActionButton';
 
 interface FlowDiagramProps {
@@ -40,32 +40,54 @@ const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
   return { nodes: newNodes, edges };
 };
 
-const MOCK_NODES = [
-  { id: '1', data: { label: 'Analysis' }, position: { x: 0, y: 0 }, style: { background: '#1e3a8a', color: '#fff', border: '1px solid #3b82f6', borderRadius: '8px', padding: '10px' } },
-  { id: '2', data: { label: 'Planning' }, position: { x: 0, y: 0 }, style: { background: '#1e3a8a', color: '#fff', border: '1px solid #3b82f6', borderRadius: '8px', padding: '10px' } },
-  { id: '3', data: { label: 'Solutioning' }, position: { x: 0, y: 0 }, style: { background: '#1e3a8a', color: '#fff', border: '1px solid #3b82f6', borderRadius: '8px', padding: '10px' } },
-  { id: '4', data: { label: 'Implementation' }, position: { x: 0, y: 0 }, style: { background: '#374151', color: '#fff', border: '1px solid #4b5563', borderRadius: '8px', padding: '10px' } }
-];
-
-const MOCK_EDGES = [
-  { id: 'e1-2', source: '1', target: '2', animated: true },
-  { id: 'e2-3', source: '2', target: '3', animated: true },
-  { id: 'e3-4', source: '3', target: '4' }
-];
+const STATUS_COLORS: Record<FlowNodeStatus, { bg: string; border: string }> = {
+  done: { bg: '#065f46', border: '#10b981' },
+  active: { bg: '#1e3a8a', border: '#3b82f6' },
+  'in-progress': { bg: '#78350f', border: '#f59e0b' },
+  pending: { bg: '#374151', border: '#4b5563' },
+};
 
 function FlowContent({ callTool }: FlowDiagramProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [track, setTrack] = useState<Track>('bmad');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(MOCK_NODES, MOCK_EDGES);
-    setNodes(layoutedNodes as any[]);
-    setEdges(layoutedEdges as any[]);
-  }, [track, setNodes, setEdges]);
+    let active = true;
+    setLoading(true);
+    callTool('bmad_flow', { track }).then((res: FlowGraph) => {
+      if (!active || !res || !res.nodes) return;
+      const rfNodes = res.nodes.map(n => ({
+        id: n.id,
+        data: { label: n.label },
+        position: { x: 0, y: 0 },
+        style: {
+          background: STATUS_COLORS[n.status].bg,
+          color: '#fff',
+          border: `1px solid ${STATUS_COLORS[n.status].border}`,
+          borderRadius: '8px',
+          padding: '10px',
+          fontWeight: n.type === 'phase' ? 'bold' : 'normal',
+        },
+      }));
+      const rfEdges = res.edges.map(e => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        animated: true,
+        ...(e.label ? { label: e.label } : {}),
+      }));
+      const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(rfNodes, rfEdges);
+      setNodes(layoutedNodes as any[]);
+      setEdges(layoutedEdges as any[]);
+    }).catch(() => {}).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [track, callTool, setNodes, setEdges]);
 
   return (
     <div className="w-full h-full">
+      {loading && <div className="absolute top-4 right-4 z-10 text-gray-400 text-sm">Loading flow...</div>}
       <ReactFlow
         nodes={nodes}
         edges={edges}

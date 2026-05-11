@@ -78,6 +78,23 @@ export function Dashboard({ projectState, navigate }: DashboardProps) {
           })}
         </div>
       </div>
+      <div>
+        <h2 className="text-xl font-bold mb-4 text-gray-100">Recent Activity</h2>
+        <div className="bg-gray-800 rounded-lg border border-gray-700 divide-y divide-gray-700">
+          {state.epics.flatMap(e => e.stories).slice(0, 5).map((story, i) => (
+            <div key={story.slug || i} className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-750" onClick={() => navigate('story-detail', { slug: story.slug })}>
+              <div className="flex items-center gap-3">
+                <span className="text-gray-500 text-xs font-mono">{story.epicId}</span>
+                <span className="text-gray-200 text-sm">{story.title || story.slug}</span>
+              </div>
+              <StatusBadge status={story.status} />
+            </div>
+          ))}
+          {state.epics.flatMap(e => e.stories).length === 0 && (
+            <div className="px-4 py-3 text-gray-500 text-sm">No recent activity.</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

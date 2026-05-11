@@ -17,14 +17,17 @@ export function DocsView({ callTool }: DocsViewProps) {
   const [selected, setSelected] = useState(DOCS[0].id);
   const [search, setSearch] = useState('');
   const [content, setContent] = useState<string>('');
+  const [allContents, setAllContents] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    callTool('bmad_read_docs', { document: selected }).then(res => {
+    callTool('bmad_docs', { document: selected }).then(res => {
       if (active) {
-        setContent(res?.content || '*No content found.*');
+        const text = res?.content || '*No content found.*';
+        setContent(text);
+        setAllContents(prev => ({ ...prev, [selected]: text }));
         setLoading(false);
       }
     }).catch(() => {
@@ -36,7 +39,14 @@ export function DocsView({ callTool }: DocsViewProps) {
     return () => { active = false; };
   }, [selected, callTool]);
 
-  const filteredDocs = DOCS.filter(d => d.label.toLowerCase().includes(search.toLowerCase()));
+  const filteredDocs = DOCS.filter(d => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    if (d.label.toLowerCase().includes(q)) return true;
+    const docContent = allContents[d.id];
+    if (docContent && docContent.toLowerCase().includes(q)) return true;
+    return false;
+  });
 
   return (
     <div className="flex h-full w-full">

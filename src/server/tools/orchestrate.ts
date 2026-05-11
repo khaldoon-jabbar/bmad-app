@@ -46,12 +46,41 @@ function checkPhaseGate(triggerCode: string, state: ProjectState): PhaseGateResu
   return { allowed: true, missingPrerequisites: [], message: 'All prerequisites met' };
 }
 
-export async function handleOrchestrate(input: OrchestrateInput, projectPath: string): Promise<OrchestrateOutput> {
+export async function handleOrchestrate(
+  input: OrchestrateInput,
+  projectPath: string,
+  sampling?: { createMessage: (params: any) => Promise<any> },
+): Promise<OrchestrateOutput> {
   const state = await getDashboardState(projectPath);
   const gateResult = checkPhaseGate(input.triggerCode, state);
 
   if (!gateResult.allowed) {
     return { status: 'blocked', message: gateResult.message, gateResult };
+  }
+
+  // If sampling is available, use it to request the host LLM to execute the skill
+  if (sampling) {
+    try {
+      const contextStr = input.context
+        ? Object.entries(input.context).map(([k, v]) => `${k}: ${v}`).join(', ')
+        : '';
+      const prompt = `Execute BMad skill "${input.skill}" with trigger code "${input.triggerCode}".${contextStr ? ` Context: ${contextStr}` : ''} Follow the BMad Method workflow for this step.`;
+
+      const samplingResult = await sampling.createMessage({
+        messages: [{ role: 'user', content: { type: 'text', text: prompt } }],
+        maxTokens: 4096,
+      });
+
+      const responseText = samplingResult?.content?.[0]?.text || samplingResult?.content || 'Skill executed via sampling.';
+
+      return {
+        status: 'triggered',
+        message: typeof responseText === 'string' ? responseText : JSON.stringify(responseText),
+        gateResult,
+      };
+    } catch (e) {
+      // Fall through to basic trigger if sampling fails
+    }
   }
 
   return {

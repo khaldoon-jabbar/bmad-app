@@ -14,7 +14,8 @@ export type ViewId =
   | 'quick-mode'
   | 'docs'
   | 'agent-roster'
-  | 'flow-diagram';
+  | 'flow-diagram'
+  | 'parallel';
 
 export interface AcceptanceCriterion {
   id: string;

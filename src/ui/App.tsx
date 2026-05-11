@@ -10,6 +10,7 @@ import { QuickMode } from './views/QuickMode';
 import { DocsView } from './views/DocsView';
 import { AgentRoster } from './views/AgentRoster';
 import { FlowDiagram } from './views/FlowDiagram';
+import { ParallelView } from './views/ParallelView';
 import { useHostStyles } from '@modelcontextprotocol/ext-apps/react';
 
 const MENU_ITEMS: { id: ViewId; label: string; icon: string }[] = [
@@ -19,6 +20,7 @@ const MENU_ITEMS: { id: ViewId; label: string; icon: string }[] = [
   { id: 'quick-mode', label: 'Quick Mode', icon: '⚡' },
   { id: 'agent-roster', label: 'Agents', icon: '🤖' },
   { id: 'flow-diagram', label: 'Workflow', icon: '🔄' },
+  { id: 'parallel', label: 'Parallel', icon: '⚡️' },
 ];
 
 export function App() {
@@ -27,7 +29,7 @@ export function App() {
 
   if (!isConnected) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-gray-900 text-gray-100">
+      <div className="flex min-h-[800px] w-full items-center justify-center bg-gray-900 text-gray-100">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
           <p className="text-xl font-medium">Connecting to Host...</p>
@@ -42,17 +44,18 @@ export function App() {
       case 'phase': return <PhaseView phase={navState.params?.phase as any} projectState={projectState} />;
       case 'sprint-board': return <SprintBoard projectState={projectState} navigate={navigate} />;
       case 'epic-detail': return <EpicDetail epicId={navState.params?.id || ''} projectState={projectState} navigate={navigate} />;
-      case 'story-detail': return <StoryDetail slug={navState.params?.slug || ''} projectState={projectState} navigate={navigate} />;
+      case 'story-detail': return <StoryDetail slug={navState.params?.slug || ''} projectState={projectState} navigate={navigate} callTool={callTool} />;
       case 'quick-mode': return <QuickMode callTool={callTool} />;
       case 'docs': return <DocsView callTool={callTool} />;
       case 'agent-roster': return <AgentRoster callTool={callTool} />;
       case 'flow-diagram': return <FlowDiagram callTool={callTool} />;
+      case 'parallel': return <ParallelView callTool={callTool} />;
       default: return <Dashboard projectState={projectState} navigate={navigate} />;
     }
   };
 
   return (
-    <div className="flex h-screen w-full bg-gray-900 text-gray-100 overflow-hidden">
+    <div className="flex min-h-[800px] w-full bg-gray-900 text-gray-100 overflow-hidden">
       <div className="w-64 bg-gray-900 border-r border-gray-700 flex flex-col">
         <div className="p-4 border-b border-gray-700 flex items-center gap-3">
           <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white">BM</div>
