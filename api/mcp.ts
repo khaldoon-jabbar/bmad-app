@@ -122,7 +122,14 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === 'GET') {
     if (!sessionId || !sessions.has(sessionId)) {
-      res.status(400).json({ error: 'Invalid or missing session ID' });
+      // Bare GET — return server metadata for discoverability
+      res.status(200).json({
+        name: 'bmad-app',
+        version: '1.0.0',
+        description: 'BMad Method Visual Management MCP Server',
+        tools: ['bmad_dashboard', 'bmad_orchestrate', 'bmad_quick', 'bmad_docs', 'bmad_agents', 'bmad_flow', 'bmad_parallel'],
+        usage: 'POST to this endpoint to initialize an MCP session',
+      });
       return;
     }
     const session = sessions.get(sessionId);
