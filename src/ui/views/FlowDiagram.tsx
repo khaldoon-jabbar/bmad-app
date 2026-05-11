@@ -7,6 +7,7 @@ import { ActionButton } from '../components/ActionButton';
 
 interface FlowDiagramProps {
   callTool: (name: string, args: any) => Promise<any>;
+  callToolWithResult?: (name: string, args: any) => Promise<any>;
 }
 
 const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
@@ -47,7 +48,7 @@ const STATUS_COLORS: Record<FlowNodeStatus, { bg: string; border: string }> = {
   pending: { bg: '#374151', border: '#4b5563' },
 };
 
-function FlowContent({ callTool }: FlowDiagramProps) {
+function FlowContent({ callTool, callToolWithResult }: FlowDiagramProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [track, setTrack] = useState<Track>('bmad');
@@ -85,19 +86,21 @@ function FlowContent({ callTool }: FlowDiagramProps) {
       setEdges(layoutedEdges as any[]);
     }).catch(() => {}).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [track, callTool, setNodes, setEdges]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [track]);
 
   const onNodeClick = (_: any, node: Node) => {
     const flowNode = flowData.find(n => n.id === node.id);
     if (flowNode?.triggerCode) {
       const skillMap: Record<string, string> = {
-        PB: '/bmad-product-brief', CA: '/bmad-arch', UX: '/bmad-ux',
-        SP: '/bmad-sprint-plan', CS: '/bmad-story', DS: '/bmad-dev-story',
-        CR: '/bmad-code-review', QD: '/bmad-quick-dev', TW: '/bmad-tech-writer',
-        RT: '/bmad-retro', GC: '/bmad-gate-check',
+        AB: '/bmad-product-brief', CP: '/bmad-product-brief', CU: '/bmad-ux',
+        CA: '/bmad-arch', CE: '/bmad-story', SP: '/bmad-sprint-plan',
+        DS: '/bmad-dev-story', CR: '/bmad-code-review', QD: '/bmad-quick-dev',
+        PB: '/bmad-product-brief', UX: '/bmad-ux', CS: '/bmad-story',
+        TW: '/bmad-tech-writer', RT: '/bmad-retro', GC: '/bmad-gate-check',
       };
       const skill = skillMap[flowNode.triggerCode] || `/bmad-${flowNode.id}`;
-      callTool('bmad_orchestrate', { skill, triggerCode: flowNode.triggerCode });
+      (callToolWithResult || callTool)('bmad_orchestrate', { skill, triggerCode: flowNode.triggerCode });
     }
   };
 

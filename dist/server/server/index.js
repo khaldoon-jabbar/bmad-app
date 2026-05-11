@@ -28,7 +28,8 @@ server.registerTool('bmad_orchestrate', {
     inputSchema: {
         skill: z.string(),
         triggerCode: z.string(),
-        context: z.object({ storySlug: z.string().optional(), epicId: z.string().optional() }).optional(),
+        context: z.object({ storySlug: z.string().optional(), epicId: z.string().optional(), track: z.string().optional() }).optional(),
+        preferredModel: z.string().optional(),
     },
     _meta: { ui: { resourceUri: UI_RESOURCE_URI } },
 }, async (args) => {
@@ -95,6 +96,36 @@ server.registerTool('bmad_parallel', {
 }, async ({ action, tasks, maxConcurrency }) => {
     const result = await handleParallel({ action, tasks, maxConcurrency }, process.cwd());
     return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+});
+server.registerTool('bmad_help', {
+    title: 'BMad Help',
+    description: 'Chat with BMad Help assistant for guidance on BMad Method',
+    inputSchema: {
+        message: z.string(),
+        history: z.array(z.object({
+            role: z.enum(['user', 'assistant']),
+            content: z.string(),
+            timestamp: z.number(),
+        })).optional(),
+    },
+    _meta: { ui: { resourceUri: UI_RESOURCE_URI } },
+}, async ({ message, history }) => {
+    const sampling = { createMessage: (params) => server.server.createMessage(params) };
+    try {
+        const historyContext = history?.length
+            ? '\n\nConversation history:\n' + history.map((m) => `${m.role}: ${m.content}`).join('\n')
+            : '';
+        const prompt = `Execute BMad skill "/bmad-help". User question: ${message}${historyContext}`;
+        const result = await sampling.createMessage({
+            messages: [{ role: 'user', content: { type: 'text', text: prompt } }],
+            maxTokens: 4096,
+        });
+        const responseText = result?.content?.[0]?.text || result?.content || 'I can help with BMad Method questions. What would you like to know?';
+        return { content: [{ type: 'text', text: JSON.stringify({ role: 'assistant', content: typeof responseText === 'string' ? responseText : JSON.stringify(responseText), timestamp: Date.now() }) }] };
+    }
+    catch {
+        return { content: [{ type: 'text', text: JSON.stringify({ role: 'assistant', content: 'BMad Help is available. Ask me anything about the BMad Method!', timestamp: Date.now() }) }] };
+    }
 });
 server.registerResource('BMad Dashboard', UI_RESOURCE_URI, { mimeType: UI_MIME_TYPE }, async () => {
     const htmlPath = path.join(import.meta.dirname, '../../ui/index.html');

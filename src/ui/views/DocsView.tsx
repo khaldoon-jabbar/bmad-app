@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { ModelPicker } from '../components/ModelPicker';
+import { ActionButton } from '../components/ActionButton';
 
 interface DocsViewProps {
   callTool: (name: string, args: any) => Promise<any>;
@@ -81,7 +83,17 @@ export function DocsView({ callTool }: DocsViewProps) {
           ))}
         </div>
       </div>
-      <div className="flex-1 p-8 bg-gray-900 overflow-y-auto">
+      <div className="flex-1 flex flex-col bg-gray-900 overflow-y-auto">
+        <div className="flex items-center gap-3 px-8 py-3 border-b border-gray-700">
+          <ModelPicker />
+          <ActionButton variant="secondary" onClick={() => {
+            const model = localStorage.getItem('bmad-preferred-model') || 'Default';
+            const args: any = { skill: '/bmad-doc-review', triggerCode: 'DR', context: { document: selected } };
+            if (model !== 'Default') args.preferredModel = model;
+            callTool('bmad_orchestrate', args);
+          }}>Validate Document</ActionButton>
+        </div>
+        <div className="flex-1 p-8 overflow-y-auto">
         {loading ? (
           <div className="flex justify-center items-center h-full text-gray-500">Loading document...</div>
         ) : (
@@ -89,6 +101,7 @@ export function DocsView({ callTool }: DocsViewProps) {
             <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

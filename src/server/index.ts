@@ -38,7 +38,7 @@ server.registerTool(
     inputSchema: {
       skill: z.string(),
       triggerCode: z.string(),
-      context: z.object({ storySlug: z.string().optional(), epicId: z.string().optional() }).optional(),
+      context: z.object({ storySlug: z.string().optional(), epicId: z.string().optional(), track: z.string().optional() }).optional(),
       preferredModel: z.string().optional(),
     },
     _meta: { ui: { resourceUri: UI_RESOURCE_URI } },
@@ -156,8 +156,9 @@ server.registerTool(
       const historyContext = history?.length
         ? '\n\nConversation history:\n' + history.map((m: any) => `${m.role}: ${m.content}`).join('\n')
         : '';
+      const prompt = `Execute BMad skill "/bmad-help". User question: ${message}${historyContext}`;
       const result = await sampling.createMessage({
-        messages: [{ role: 'user', content: { type: 'text', text: `You are BMad Help, an assistant for the BMad Method. Answer questions about BMad workflows, agents, phases, and best practices.${historyContext}\n\nUser question: ${message}` } }],
+        messages: [{ role: 'user', content: { type: 'text', text: prompt } }],
         maxTokens: 4096,
       });
       const responseText = (result?.content as any)?.[0]?.text || result?.content || 'I can help with BMad Method questions. What would you like to know?';

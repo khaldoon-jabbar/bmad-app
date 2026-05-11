@@ -48,7 +48,7 @@ export async function handleOrchestrate(input, projectPath, sampling) {
             const contextStr = input.context
                 ? Object.entries(input.context).map(([k, v]) => `${k}: ${v}`).join(', ')
                 : '';
-            const prompt = `Execute BMad skill "${input.skill}" with trigger code "${input.triggerCode}".${contextStr ? ` Context: ${contextStr}` : ''} Follow the BMad Method workflow for this step.`;
+            const prompt = `Execute BMad skill "${input.skill}" with trigger code "${input.triggerCode}".${contextStr ? ` Context: ${contextStr}` : ''}${input.preferredModel ? ` Preferred model: ${input.preferredModel}.` : ''} Follow the BMad Method workflow for this step.`;
             const samplingResult = await sampling.createMessage({
                 messages: [{ role: 'user', content: { type: 'text', text: prompt } }],
                 maxTokens: 4096,

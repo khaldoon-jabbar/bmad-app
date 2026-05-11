@@ -14,6 +14,7 @@ import { ParallelView } from './views/ParallelView';
 import { InitView } from './views/InitView';
 import { HelpButton } from './components/HelpButton';
 import { HelpChat } from './components/HelpChat';
+import { ToolResultPanel } from './components/ToolResultPanel';
 import { useHostStyles } from '@modelcontextprotocol/ext-apps/react';
 
 const MENU_ITEMS: { id: ViewId; label: string; icon: string }[] = [
@@ -27,7 +28,7 @@ const MENU_ITEMS: { id: ViewId; label: string; icon: string }[] = [
 ];
 
 export function App() {
-  const { app, isConnected, isLoading, projectState, callTool, navState, navigate, refreshState } = useBmadApp();
+  const { app, isConnected, isLoading, projectState, callTool, callToolWithResult, toolResult, dismissResult, navState, navigate, refreshState } = useBmadApp();
   const [helpOpen, setHelpOpen] = useState(false);
   useHostStyles(app, app?.getHostContext());
 
@@ -54,17 +55,17 @@ export function App() {
 
   const renderView = () => {
     switch (navState.view) {
-      case 'dashboard': return <Dashboard projectState={projectState} navigate={navigate} callTool={callTool} />;
-      case 'phase': return <PhaseView phase={navState.params?.phase as any} projectState={projectState} callTool={callTool} />;
+      case 'dashboard': return <Dashboard projectState={projectState} navigate={navigate} callTool={callToolWithResult} />;
+      case 'phase': return <PhaseView phase={navState.params?.phase as any} projectState={projectState} callTool={callToolWithResult} />;
       case 'sprint-board': return <SprintBoard projectState={projectState} navigate={navigate} />;
-      case 'epic-detail': return <EpicDetail epicId={navState.params?.id || ''} projectState={projectState} navigate={navigate} />;
-      case 'story-detail': return <StoryDetail slug={navState.params?.slug || ''} projectState={projectState} navigate={navigate} callTool={callTool} />;
+      case 'epic-detail': return <EpicDetail epicId={navState.params?.id || ''} projectState={projectState} navigate={navigate} callTool={callToolWithResult} />;
+      case 'story-detail': return <StoryDetail slug={navState.params?.slug || ''} projectState={projectState} navigate={navigate} callTool={callToolWithResult} />;
       case 'quick-mode': return <QuickMode callTool={callTool} />;
       case 'docs': return <DocsView callTool={callTool} />;
       case 'agent-roster': return <AgentRoster callTool={callTool} />;
-      case 'flow-diagram': return <FlowDiagram callTool={callTool} />;
-      case 'parallel': return <ParallelView callTool={callTool} />;
-      default: return <Dashboard projectState={projectState} navigate={navigate} callTool={callTool} />;
+      case 'flow-diagram': return <FlowDiagram callTool={callTool} callToolWithResult={callToolWithResult} />;
+      case 'parallel': return <ParallelView callTool={callToolWithResult} />;
+      default: return <Dashboard projectState={projectState} navigate={navigate} callTool={callToolWithResult} />;
     }
   };
 
@@ -99,6 +100,7 @@ export function App() {
       </main>
       <HelpButton onClick={() => setHelpOpen(true)} />
       <HelpChat isOpen={helpOpen} onClose={() => setHelpOpen(false)} callTool={callTool} />
+      <ToolResultPanel result={toolResult} onDismiss={dismissResult} />
     </div>
   );
 }

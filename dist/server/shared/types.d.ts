@@ -38,6 +38,7 @@ export interface BmadConfig {
     createdAt: string;
 }
 export interface ProjectState {
+    initialized: boolean;
     track: Track | null;
     phase: Phase | null;
     documents: {
@@ -112,7 +113,18 @@ export interface OrchestrateInput {
     context?: {
         storySlug?: string;
         epicId?: string;
+        track?: string;
     };
+    preferredModel?: string;
+}
+export interface HelpMessage {
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp: number;
+}
+export interface HelpInput {
+    message: string;
+    history?: HelpMessage[];
 }
 export interface OrchestrateOutput {
     status: 'triggered' | 'blocked';

@@ -4,7 +4,7 @@ export type StoryStatus = 'draft' | 'in-progress' | 'review' | 'done' | 'blocked
 export type EpicStatus = 'draft' | 'in-progress' | 'done';
 export type SprintStatusType = 'planning' | 'active' | 'complete';
 export type FlowNodeStatus = 'done' | 'active' | 'in-progress' | 'pending';
-export type ViewId = 'dashboard' | 'phase' | 'sprint-board' | 'epic-detail' | 'story-detail' | 'quick-mode' | 'docs' | 'agent-roster' | 'flow-diagram';
+export type ViewId = 'dashboard' | 'phase' | 'sprint-board' | 'epic-detail' | 'story-detail' | 'quick-mode' | 'docs' | 'agent-roster' | 'flow-diagram' | 'parallel';
 export interface AcceptanceCriterion {
     id: string;
     description: string;
@@ -37,7 +37,14 @@ export interface BmadConfig {
     track: Track;
     createdAt: string;
 }
+export interface RecentAction {
+    id: string;
+    action: string;
+    target: string;
+    timestamp: string;
+}
 export interface ProjectState {
+    initialized: boolean;
     track: Track | null;
     phase: Phase | null;
     documents: {
@@ -49,6 +56,7 @@ export interface ProjectState {
     epics: Epic[];
     sprint: SprintStatus | null;
     config: BmadConfig | null;
+    recentActions: RecentAction[];
 }
 export interface TriggerCode {
     code: string;
@@ -108,10 +116,17 @@ export interface DashboardInput {
 export interface OrchestrateInput {
     skill: string;
     triggerCode: string;
-    context?: {
-        storySlug?: string;
-        epicId?: string;
-    };
+    context?: { storySlug?: string; epicId?: string; track?: string };
+    preferredModel?: string;
+}
+export interface HelpMessage {
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp: number;
+}
+export interface HelpInput {
+    message: string;
+    history?: HelpMessage[];
 }
 export interface OrchestrateOutput {
     status: 'triggered' | 'blocked';

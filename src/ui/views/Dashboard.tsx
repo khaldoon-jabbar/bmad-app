@@ -4,6 +4,7 @@ import { PhaseIndicator } from '../components/PhaseIndicator';
 import { ProgressBar } from '../components/ProgressBar';
 import { StatusBadge } from '../components/StatusBadge';
 import { ActionButton } from '../components/ActionButton';
+import { ModelPicker } from '../components/ModelPicker';
 
 interface DashboardProps {
   projectState: ProjectState | null;
@@ -31,11 +32,18 @@ export function Dashboard({ projectState, navigate, callTool }: DashboardProps) 
     callTool('bmad_orchestrate', { skill, triggerCode });
   };
 
+  const triggerWithModel = (skill: string, triggerCode: string) => {
+    const model = localStorage.getItem('bmad-preferred-model') || 'Default';
+    const args: any = { skill, triggerCode };
+    if (model !== 'Default') args.preferredModel = model;
+    callTool('bmad_orchestrate', args);
+  };
+
   const getNextAction = () => {
     if (!state.documents.prd) return { label: 'Create PRD', skill: '/bmad-product-brief', code: 'PB' };
     if (!state.documents.architecture) return { label: 'Define Architecture', skill: '/bmad-arch', code: 'CA' };
     if (!state.documents.uxSpec) return { label: 'Create UX Design', skill: '/bmad-ux', code: 'UX' };
-    if (state.epics.length === 0) return { label: 'Plan Sprint', skill: '/bmad-sprint-plan', code: 'SP' };
+    if (state.epics.length === 0) return { label: 'Create Story', skill: '/bmad-story', code: 'CS' };
     if (!state.sprint || state.sprint.status !== 'active') return { label: 'Plan Sprint', skill: '/bmad-sprint-plan', code: 'SP' };
     return { label: 'Start Dev Story', skill: '/bmad-dev-story', code: 'DS' };
   };
@@ -78,8 +86,12 @@ export function Dashboard({ projectState, navigate, callTool }: DashboardProps) 
           <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-quick-dev', 'QD')}>Quick Dev</ActionButton>
           <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-tech-writer', 'TW')}>Generate Docs</ActionButton>
           <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-retro', 'RT')}>Run Retrospective</ActionButton>
-          <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-gate-check', 'GC')}>Validate Phase Gate</ActionButton>
-          <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-code-review', 'CR')}>Code Review</ActionButton>
+          <div className="col-span-2 md:col-span-4 flex items-center gap-3 pt-2 border-t border-gray-700">
+            <span className="text-xs text-gray-400">Review Model:</span>
+            <ModelPicker />
+          </div>
+          <ActionButton variant="secondary" onClick={() => triggerWithModel('/bmad-gate-check', 'GC')}>Validate Phase Gate</ActionButton>
+          <ActionButton variant="secondary" onClick={() => triggerWithModel('/bmad-code-review', 'CR')}>Code Review</ActionButton>
         </div>
       </div>
 

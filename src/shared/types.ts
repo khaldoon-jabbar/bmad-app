@@ -137,7 +137,7 @@ export interface DashboardInput {
 export interface OrchestrateInput {
   skill: string;
   triggerCode: string;
-  context?: { storySlug?: string; epicId?: string };
+  context?: { storySlug?: string; epicId?: string; track?: string };
   preferredModel?: string;
 }
 

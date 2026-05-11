@@ -12,6 +12,7 @@ export function useBmadApp() {
   const [projectState, setProjectState] = useState<ProjectState | null>(null);
   const [navState, setNavState] = useState<NavigationState>({ view: 'dashboard' });
   const [isLoading, setIsLoading] = useState(false);
+  const [toolResult, setToolResult] = useState<string | null>(null);
 
   const callTool = useCallback(async (name: string, args: any) => {
     if (!app || !isConnected) throw new Error('Not connected');
@@ -28,6 +29,26 @@ export function useBmadApp() {
       setIsLoading(false);
     }
   }, [app, isConnected]);
+
+  const callToolWithResult = useCallback(async (name: string, args: any) => {
+    const result = await callTool(name, args);
+    let display: string;
+    if (typeof result === 'string') {
+      display = result;
+    } else if (result?.message) {
+      display = result.message;
+    } else if (result?.content) {
+      display = typeof result.content === 'string' ? result.content : JSON.stringify(result.content, null, 2);
+    } else {
+      display = JSON.stringify(result, null, 2);
+    }
+    setToolResult(display);
+    return result;
+  }, [callTool]);
+
+  const dismissResult = useCallback(() => {
+    setToolResult(null);
+  }, []);
 
   const refreshState = useCallback(async () => {
     if (!isConnected) return;
@@ -55,6 +76,9 @@ export function useBmadApp() {
     projectState,
     refreshState,
     callTool,
+    callToolWithResult,
+    toolResult,
+    dismissResult,
     navState,
     navigate
   };

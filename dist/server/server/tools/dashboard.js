@@ -33,6 +33,19 @@ function inferPhase(state) {
 }
 export async function getDashboardState(projectPath) {
     const bmadOutput = path.join(projectPath, '_bmad-output');
+    const initialized = await fileExists(bmadOutput);
+    if (!initialized) {
+        return {
+            initialized: false,
+            track: null,
+            phase: null,
+            documents: { prd: false, architecture: false, uxSpec: false, projectContext: false },
+            epics: [],
+            sprint: null,
+            config: null,
+            recentActions: [],
+        };
+    }
     const documents = {
         prd: await fileExists(path.join(bmadOutput, 'PRD.md')),
         architecture: await fileExists(path.join(bmadOutput, 'architecture.md')),
@@ -72,6 +85,7 @@ export async function getDashboardState(projectPath) {
     }
     catch { }
     const state = {
+        initialized: true,
         track: null,
         phase: null,
         documents,
