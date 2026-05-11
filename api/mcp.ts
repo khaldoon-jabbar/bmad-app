@@ -1,10 +1,11 @@
 // @ts-nocheck
-// Vercel Serverless Function — Remote MCP endpoint
-// This is a standalone handler; Vercel bundles it separately from the Vite UI build.
+// Vercel Edge Function — Remote MCP endpoint (stateless)
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { z } from 'zod';
+
+export const config = { runtime: 'edge' };
 
 function createServer() {
   const server = new McpServer({ name: 'bmad-app', version: '1.0.0' });
@@ -104,46 +105,67 @@ function createServer() {
   return server;
 }
 
-export default async function handler(req: any, res: any) {
-  // CORS for MCP clients
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, mcp-session-id');
-  res.setHeader('Access-Control-Expose-Headers', 'mcp-session-id');
-
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
+export default async function handler(request: Request) {
+  // CORS preflight
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, mcp-session-id',
+        'Access-Control-Expose-Headers': 'mcp-session-id',
+      },
+    });
   }
 
-  if (req.method === 'GET') {
-    res.status(200).json({
+  // Bare GET — return server info
+  if (request.method === 'GET') {
+    return new Response(JSON.stringify({
       name: 'bmad-app',
       version: '1.0.0',
       description: 'BMad Method Visual Management MCP Server',
       tools: ['bmad_dashboard', 'bmad_orchestrate', 'bmad_quick', 'bmad_docs', 'bmad_agents', 'bmad_flow', 'bmad_parallel'],
       usage: 'POST to this endpoint to initialize an MCP session',
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Expose-Headers': 'mcp-session-id',
+      },
     });
-    return;
   }
 
-  if (req.method === 'POST') {
-    // Stateless mode: each request gets a fresh server+transport
-    // Vercel functions don't persist memory between invocations
+  if (request.method === 'POST') {
     const server = createServer();
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined, // stateless — no session tracking
+    const transport = new WebStandardStreamableHTTPServerTransport({
+      sessionIdGenerator: undefined, // stateless
     });
 
     await server.connect(transport);
-    await transport.handleRequest(req, res);
-    return;
+    const response = await transport.handleRequest(request);
+
+    // Inject CORS headers
+    const headers = new Headers(response.headers);
+    headers.set('Access-Control-Allow-Origin', '*');
+    headers.set('Access-Control-Expose-Headers', 'mcp-session-id');
+
+    return new Response(response.body, {
+      status: response.status,
+      headers,
+    });
   }
 
-  if (req.method === 'DELETE') {
-    res.status(200).end();
-    return;
+  if (request.method === 'DELETE') {
+    return new Response(null, {
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+    });
   }
 
-  res.status(405).json({ error: 'Method not allowed' });
+  return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+    status: 405,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
