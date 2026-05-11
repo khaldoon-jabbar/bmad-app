@@ -1,0 +1,39 @@
+{
+  "name": "bmad-app",
+  "version": "1.0.0",
+  "description": "Visual MCP App for managing BMad Method projects",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "build:server": "tsc -p tsconfig.server.json",
+    "dev": "vite",
+    "lint": "tsc --noEmit",
+    "start": "node dist/server/index.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@dagrejs/dagre": "^1.1.4",
+    "@modelcontextprotocol/ext-apps": "^1.7.1",
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@xyflow/react": "^12.6.0",
+    "js-yaml": "^4.1.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-markdown": "^10.1.0",
+    "recharts": "^2.15.3",
+    "remark-gfm": "^4.0.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.7",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.15.17",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.4",
+    "@vitejs/plugin-react": "^4.7.0",
+    "tailwindcss": "^4.1.7",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vite-plugin-singlefile": "^2.0.3"
+  }
+}
