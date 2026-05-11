@@ -6,15 +6,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
-import { IncomingMessage } from 'http';
-import { Readable } from 'stream';
 
-// Disable Vercel's automatic body parsing so the SDK gets the raw stream
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Keep Vercel's body parsing enabled — we pass the parsed body to handleRequest
 
 function createServer() {
   const server = new McpServer({ name: 'bmad-app', version: '1.0.0' });
@@ -115,7 +108,7 @@ export default async function handler(req: any, res: any) {
     });
 
     await server.connect(transport);
-    await transport.handleRequest(req, res);
+    await transport.handleRequest(req, res, req.body);
     return;
   }
 
