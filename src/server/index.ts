@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 import { z } from 'zod';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -15,9 +16,8 @@ import { contextManager, type WorkflowId } from './context-manager.js';
 const server = new McpServer({ name: 'bmad-app', version: '1.0.0' });
 
 const UI_RESOURCE_URI = 'ui://bmad-app/dashboard';
-const UI_MIME_TYPE = 'text/html';
 
-server.registerTool(
+registerAppTool(server,
   'bmad_dashboard',
   {
     title: 'BMad Dashboard',
@@ -31,7 +31,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+registerAppTool(server,
   'bmad_orchestrate',
   {
     title: 'BMad Orchestrate',
@@ -51,7 +51,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+registerAppTool(server,
   'bmad_quick',
   {
     title: 'BMad Quick Mode',
@@ -66,7 +66,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+registerAppTool(server,
   'bmad_docs',
   {
     title: 'BMad Docs',
@@ -83,7 +83,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+registerAppTool(server,
   'bmad_agents',
   {
     title: 'BMad Agents',
@@ -97,7 +97,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+registerAppTool(server,
   'bmad_flow',
   {
     title: 'BMad Flow',
@@ -114,7 +114,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+registerAppTool(server,
   'bmad_parallel',
   {
     title: 'BMad Parallel',
@@ -137,7 +137,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+registerAppTool(server,
   'bmad_help',
   {
     title: 'BMad Help',
@@ -159,7 +159,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+registerAppTool(server,
   'bmad_reset_context',
   {
     title: 'BMad Reset Context',
@@ -175,7 +175,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+registerAppTool(server,
   'bmad_context_status',
   {
     title: 'BMad Context Status',
@@ -189,14 +189,14 @@ server.registerTool(
   },
 );
 
-server.registerResource(
+registerAppResource(server,
   'BMad Dashboard',
   UI_RESOURCE_URI,
-  { mimeType: UI_MIME_TYPE },
+  { mimeType: RESOURCE_MIME_TYPE },
   async () => {
     const htmlPath = path.join(import.meta.dirname, '../../ui/index.html');
     const html = await fs.readFile(htmlPath, 'utf-8');
-    return { contents: [{ uri: UI_RESOURCE_URI, mimeType: UI_MIME_TYPE, text: html }] };
+    return { contents: [{ uri: UI_RESOURCE_URI, mimeType: RESOURCE_MIME_TYPE, text: html }] };
   },
 );
 

@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 import { z } from 'zod';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -13,8 +14,7 @@ import { handleParallel } from './tools/parallel.js';
 import { contextManager } from './context-manager.js';
 const server = new McpServer({ name: 'bmad-app', version: '1.0.0' });
 const UI_RESOURCE_URI = 'ui://bmad-app/dashboard';
-const UI_MIME_TYPE = 'text/html';
-server.registerTool('bmad_dashboard', {
+registerAppTool(server, 'bmad_dashboard', {
     title: 'BMad Dashboard',
     description: 'Get full project state for the BMad dashboard',
     inputSchema: { projectPath: z.string().optional() },
@@ -23,7 +23,7 @@ server.registerTool('bmad_dashboard', {
     const state = await getDashboardState(projectPath ?? process.cwd());
     return { content: [{ type: 'text', text: JSON.stringify(state) }] };
 });
-server.registerTool('bmad_orchestrate', {
+registerAppTool(server, 'bmad_orchestrate', {
     title: 'BMad Orchestrate',
     description: 'Trigger a BMad skill with phase gate validation',
     inputSchema: {
@@ -38,7 +38,7 @@ server.registerTool('bmad_orchestrate', {
     const result = await handleOrchestrate(args, process.cwd(), sampling);
     return { content: [{ type: 'text', text: JSON.stringify(result) }] };
 });
-server.registerTool('bmad_quick', {
+registerAppTool(server, 'bmad_quick', {
     title: 'BMad Quick Mode',
     description: 'Quick dev flow — describe intent and go',
     inputSchema: { intent: z.string() },
@@ -48,7 +48,7 @@ server.registerTool('bmad_quick', {
     const result = await handleQuickMode(args, sampling);
     return { content: [{ type: 'text', text: JSON.stringify(result) }] };
 });
-server.registerTool('bmad_docs', {
+registerAppTool(server, 'bmad_docs', {
     title: 'BMad Docs',
     description: 'Read project documentation',
     inputSchema: {
@@ -60,7 +60,7 @@ server.registerTool('bmad_docs', {
     const result = await handleDocs(args, process.cwd());
     return { content: [{ type: 'text', text: JSON.stringify(result) }] };
 });
-server.registerTool('bmad_agents', {
+registerAppTool(server, 'bmad_agents', {
     title: 'BMad Agents',
     description: 'Get the full BMad agent roster with capabilities',
     inputSchema: { projectPath: z.string().optional() },
@@ -69,7 +69,7 @@ server.registerTool('bmad_agents', {
     const agents = await handleAgents(projectPath ?? process.cwd());
     return { content: [{ type: 'text', text: JSON.stringify(agents) }] };
 });
-server.registerTool('bmad_flow', {
+registerAppTool(server, 'bmad_flow', {
     title: 'BMad Flow',
     description: 'Get the BMad method flow graph for a track',
     inputSchema: {
@@ -81,7 +81,7 @@ server.registerTool('bmad_flow', {
     const graph = await handleFlow(track, projectPath ?? process.cwd());
     return { content: [{ type: 'text', text: JSON.stringify(graph) }] };
 });
-server.registerTool('bmad_parallel', {
+registerAppTool(server, 'bmad_parallel', {
     title: 'BMad Parallel',
     description: 'Analyze and execute parallel tasks',
     inputSchema: {
@@ -99,7 +99,7 @@ server.registerTool('bmad_parallel', {
     const result = await handleParallel({ action, tasks, maxConcurrency }, process.cwd());
     return { content: [{ type: 'text', text: JSON.stringify(result) }] };
 });
-server.registerTool('bmad_help', {
+registerAppTool(server, 'bmad_help', {
     title: 'BMad Help',
     description: 'Chat with BMad Help assistant for guidance on BMad Method',
     inputSchema: {
@@ -117,7 +117,7 @@ server.registerTool('bmad_help', {
         return { content: [{ type: 'text', text: JSON.stringify({ role: 'assistant', content: 'BMad Help is available. Ask me anything about the BMad Method!', timestamp: Date.now() }) }] };
     }
 });
-server.registerTool('bmad_reset_context', {
+registerAppTool(server, 'bmad_reset_context', {
     title: 'BMad Reset Context',
     description: 'Reset a workflow context window to start a fresh conversation',
     inputSchema: {
@@ -128,7 +128,7 @@ server.registerTool('bmad_reset_context', {
     contextManager.reset(workflow);
     return { content: [{ type: 'text', text: JSON.stringify({ status: 'reset', workflow, message: `Context for "${workflow}" has been cleared.` }) }] };
 });
-server.registerTool('bmad_context_status', {
+registerAppTool(server, 'bmad_context_status', {
     title: 'BMad Context Status',
     description: 'Get message counts for all active workflow context windows',
     inputSchema: {},
@@ -137,10 +137,10 @@ server.registerTool('bmad_context_status', {
     const status = contextManager.getStatus();
     return { content: [{ type: 'text', text: JSON.stringify(status) }] };
 });
-server.registerResource('BMad Dashboard', UI_RESOURCE_URI, { mimeType: UI_MIME_TYPE }, async () => {
+registerAppResource(server, 'BMad Dashboard', UI_RESOURCE_URI, { mimeType: RESOURCE_MIME_TYPE }, async () => {
     const htmlPath = path.join(import.meta.dirname, '../../ui/index.html');
     const html = await fs.readFile(htmlPath, 'utf-8');
-    return { contents: [{ uri: UI_RESOURCE_URI, mimeType: UI_MIME_TYPE, text: html }] };
+    return { contents: [{ uri: UI_RESOURCE_URI, mimeType: RESOURCE_MIME_TYPE, text: html }] };
 });
 const transport = new StdioServerTransport();
 await server.connect(transport);
