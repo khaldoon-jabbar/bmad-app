@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { ReactFlow, ReactFlowProvider, Controls, MiniMap, Background, useNodesState, useEdgesState, Panel, Node, Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import dagre from '@dagrejs/dagre';
@@ -54,11 +54,13 @@ function FlowContent({ callTool, callToolWithResult }: FlowDiagramProps) {
   const [track, setTrack] = useState<Track>('bmad');
   const [loading, setLoading] = useState(false);
   const [flowData, setFlowData] = useState<FlowNodeType[]>([]);
+  const callToolRef = useRef(callTool);
+  callToolRef.current = callTool;
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    callTool('bmad_flow', { track }).then((res: FlowGraph) => {
+    callToolRef.current('bmad_flow', { track }).then((res: FlowGraph) => {
       if (!active || !res || !res.nodes) return;
       setFlowData(res.nodes);
       const rfNodes = res.nodes.map(n => ({
@@ -86,8 +88,7 @@ function FlowContent({ callTool, callToolWithResult }: FlowDiagramProps) {
       setEdges(layoutedEdges as any[]);
     }).catch(() => {}).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [track]);
+  }, [track, setNodes, setEdges]);
 
   const onNodeClick = (_: any, node: Node) => {
     const flowNode = flowData.find(n => n.id === node.id);

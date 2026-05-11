@@ -6,6 +6,7 @@ import { ActionButton } from '../components/ActionButton';
 
 interface DocsViewProps {
   callTool: (name: string, args: any) => Promise<any>;
+  callToolWithResult?: (name: string, args: any) => Promise<any>;
 }
 
 const DOCS = [
@@ -15,7 +16,7 @@ const DOCS = [
   { id: 'project-context', label: 'Project Context' }
 ];
 
-export function DocsView({ callTool }: DocsViewProps) {
+export function DocsView({ callTool, callToolWithResult }: DocsViewProps) {
   const [selected, setSelected] = useState(DOCS[0].id);
   const [search, setSearch] = useState('');
   const [content, setContent] = useState<string>('');
@@ -90,8 +91,7 @@ export function DocsView({ callTool }: DocsViewProps) {
             const model = localStorage.getItem('bmad-preferred-model') || 'Default';
             const args: any = { skill: '/bmad-doc-review', triggerCode: 'DR', context: { document: selected } };
             if (model !== 'Default') args.preferredModel = model;
-            callTool('bmad_orchestrate', args);
-          }}>Validate Document</ActionButton>
+            (callToolWithResult || callTool)('bmad_orchestrate', args);          }}>Validate Document</ActionButton>
         </div>
         <div className="flex-1 p-8 overflow-y-auto">
         {loading ? (

@@ -46,9 +46,10 @@ export function App() {
   if (projectState && !projectState.initialized) {
     return (
       <div className="min-h-[800px] w-full bg-gray-900 text-gray-100">
-        <InitView callTool={callTool} onInitComplete={refreshState} />
+        <InitView callTool={callToolWithResult} onInitComplete={refreshState} />
         <HelpButton onClick={() => setHelpOpen(true)} />
         <HelpChat isOpen={helpOpen} onClose={() => setHelpOpen(false)} callTool={callTool} />
+        <ToolResultPanel result={toolResult} onDismiss={dismissResult} />
       </div>
     );
   }
@@ -61,8 +62,8 @@ export function App() {
       case 'epic-detail': return <EpicDetail epicId={navState.params?.id || ''} projectState={projectState} navigate={navigate} callTool={callToolWithResult} />;
       case 'story-detail': return <StoryDetail slug={navState.params?.slug || ''} projectState={projectState} navigate={navigate} callTool={callToolWithResult} />;
       case 'quick-mode': return <QuickMode callTool={callTool} />;
-      case 'docs': return <DocsView callTool={callTool} />;
-      case 'agent-roster': return <AgentRoster callTool={callTool} />;
+      case 'docs': return <DocsView callTool={callTool} callToolWithResult={callToolWithResult} />;
+      case 'agent-roster': return <AgentRoster callTool={callTool} callToolWithResult={callToolWithResult} />;
       case 'flow-diagram': return <FlowDiagram callTool={callTool} callToolWithResult={callToolWithResult} />;
       case 'parallel': return <ParallelView callTool={callToolWithResult} />;
       default: return <Dashboard projectState={projectState} navigate={navigate} callTool={callToolWithResult} />;

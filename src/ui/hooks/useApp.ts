@@ -31,19 +31,25 @@ export function useBmadApp() {
   }, [app, isConnected]);
 
   const callToolWithResult = useCallback(async (name: string, args: any) => {
-    const result = await callTool(name, args);
-    let display: string;
-    if (typeof result === 'string') {
-      display = result;
-    } else if (result?.message) {
-      display = result.message;
-    } else if (result?.content) {
-      display = typeof result.content === 'string' ? result.content : JSON.stringify(result.content, null, 2);
-    } else {
-      display = JSON.stringify(result, null, 2);
+    try {
+      const result = await callTool(name, args);
+      let display: string;
+      if (typeof result === 'string') {
+        display = result;
+      } else if (result?.message) {
+        display = result.message;
+      } else if (result?.content) {
+        display = typeof result.content === 'string' ? result.content : JSON.stringify(result.content, null, 2);
+      } else {
+        display = JSON.stringify(result, null, 2);
+      }
+      setToolResult(display);
+      return result;
+    } catch (err: any) {
+      const errMsg = `**Error**\n\n${err?.message || 'Tool call failed. The MCP host may not support this operation.'}`;
+      setToolResult(errMsg);
+      throw err;
     }
-    setToolResult(display);
-    return result;
   }, [callTool]);
 
   const dismissResult = useCallback(() => {
