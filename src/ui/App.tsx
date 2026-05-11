@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useBmadApp } from './hooks/useApp';
 import { ViewId } from '../shared/types';
 import { Dashboard } from './views/Dashboard';
@@ -15,6 +15,7 @@ import { InitView } from './views/InitView';
 import { HelpButton } from './components/HelpButton';
 import { HelpChat } from './components/HelpChat';
 import { ToolResultPanel } from './components/ToolResultPanel';
+import { InputModal, SKILL_INPUT_CONFIGS, NO_INPUT_SKILLS } from './components/InputModal';
 import { useHostStyles } from '@modelcontextprotocol/ext-apps/react';
 
 const MENU_ITEMS: { id: ViewId; label: string; icon: string }[] = [
@@ -30,7 +31,28 @@ const MENU_ITEMS: { id: ViewId; label: string; icon: string }[] = [
 export function App() {
   const { app, isConnected, isLoading, projectState, callTool, callToolWithResult, toolResult, dismissResult, navState, navigate, refreshState } = useBmadApp();
   const [helpOpen, setHelpOpen] = useState(false);
+  const [inputModal, setInputModal] = useState<{ skill: string; triggerCode: string; extraContext?: Record<string, string> } | null>(null);
   useHostStyles(app, app?.getHostContext());
+
+  // Smart skill trigger: shows input modal if skill needs user data, otherwise fires directly
+  const triggerSkill = useCallback((skill: string, triggerCode: string, extraContext?: Record<string, string>) => {
+    const normalized = skill.replace(/^\//, '');
+    const config = SKILL_INPUT_CONFIGS[normalized];
+    if (config && !NO_INPUT_SKILLS.has(normalized)) {
+      setInputModal({ skill, triggerCode, extraContext });
+    } else {
+      callToolWithResult('bmad_orchestrate', { skill, triggerCode, context: extraContext });
+    }
+  }, [callToolWithResult]);
+
+  const handleInputSubmit = useCallback((values: Record<string, string>) => {
+    if (!inputModal) return;
+    const context = { ...inputModal.extraContext, ...values };
+    // Filter empty values
+    const filtered = Object.fromEntries(Object.entries(context).filter(([, v]) => v?.trim()));
+    callToolWithResult('bmad_orchestrate', { skill: inputModal.skill, triggerCode: inputModal.triggerCode, context: filtered });
+    setInputModal(null);
+  }, [inputModal, callToolWithResult]);
 
   if (!isConnected) {
     return (
@@ -56,17 +78,17 @@ export function App() {
 
   const renderView = () => {
     switch (navState.view) {
-      case 'dashboard': return <Dashboard projectState={projectState} navigate={navigate} callTool={callToolWithResult} />;
-      case 'phase': return <PhaseView phase={navState.params?.phase as any} projectState={projectState} callTool={callToolWithResult} />;
+      case 'dashboard': return <Dashboard projectState={projectState} navigate={navigate} callTool={callToolWithResult} triggerSkill={triggerSkill} />;
+      case 'phase': return <PhaseView phase={navState.params?.phase as any} projectState={projectState} callTool={callToolWithResult} triggerSkill={triggerSkill} />;
       case 'sprint-board': return <SprintBoard projectState={projectState} navigate={navigate} />;
-      case 'epic-detail': return <EpicDetail epicId={navState.params?.id || ''} projectState={projectState} navigate={navigate} callTool={callToolWithResult} />;
-      case 'story-detail': return <StoryDetail slug={navState.params?.slug || ''} projectState={projectState} navigate={navigate} callTool={callToolWithResult} />;
+      case 'epic-detail': return <EpicDetail epicId={navState.params?.id || ''} projectState={projectState} navigate={navigate} callTool={callToolWithResult} triggerSkill={triggerSkill} />;
+      case 'story-detail': return <StoryDetail slug={navState.params?.slug || ''} projectState={projectState} navigate={navigate} callTool={callToolWithResult} triggerSkill={triggerSkill} />;
       case 'quick-mode': return <QuickMode callTool={callTool} />;
       case 'docs': return <DocsView callTool={callTool} callToolWithResult={callToolWithResult} />;
-      case 'agent-roster': return <AgentRoster callTool={callTool} callToolWithResult={callToolWithResult} />;
-      case 'flow-diagram': return <FlowDiagram callTool={callTool} callToolWithResult={callToolWithResult} />;
+      case 'agent-roster': return <AgentRoster callTool={callTool} callToolWithResult={callToolWithResult} triggerSkill={triggerSkill} />;
+      case 'flow-diagram': return <FlowDiagram callTool={callTool} callToolWithResult={callToolWithResult} triggerSkill={triggerSkill} />;
       case 'parallel': return <ParallelView callTool={callToolWithResult} />;
-      default: return <Dashboard projectState={projectState} navigate={navigate} callTool={callToolWithResult} />;
+      default: return <Dashboard projectState={projectState} navigate={navigate} callTool={callToolWithResult} triggerSkill={triggerSkill} />;
     }
   };
 
@@ -102,6 +124,15 @@ export function App() {
       <HelpButton onClick={() => setHelpOpen(true)} />
       <HelpChat isOpen={helpOpen} onClose={() => setHelpOpen(false)} callTool={callTool} />
       <ToolResultPanel result={toolResult} onDismiss={dismissResult} />
+      {inputModal && SKILL_INPUT_CONFIGS[inputModal.skill.replace(/^\//, '')] && (
+        <InputModal
+          title={SKILL_INPUT_CONFIGS[inputModal.skill.replace(/^\//, '')].title}
+          description={SKILL_INPUT_CONFIGS[inputModal.skill.replace(/^\//, '')].description}
+          fields={SKILL_INPUT_CONFIGS[inputModal.skill.replace(/^\//, '')].fields}
+          onSubmit={handleInputSubmit}
+          onCancel={() => setInputModal(null)}
+        />
+      )}
     </div>
   );
 }

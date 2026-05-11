@@ -139,7 +139,59 @@ The app is a **read + orchestrate** layer. It does NOT duplicate BMad logic:
 
 ---
 
-## 5. Features
+## 5. BMad Method Workflow Model
+
+### 5.1 Three Planning Tracks
+
+| Track | Best For | Documents | UI Behavior |
+|-------|----------|-----------|-------------|
+| **Quick Flow** | Bug fixes, 1-15 stories | Tech-spec only | Minimal steps, Quick Mode prominent |
+| **BMad Method** | Products, 10-50+ stories | PRD + Architecture + UX | Full dashboard, all phases |
+| **Enterprise** | Compliance systems, 30+ stories | PRD + Architecture + Security + DevOps | Extra gates, security review steps |
+
+### 5.2 Build Cycle
+
+The app enforces BMad's linear build cycle within a sprint:
+
+1. `bmad-create-story` → Create story from epic (input modal: epic context, actor, need)
+2. `bmad-dev-story` → Implement the story (input modal: story slug, approach)
+3. `bmad-code-review` → Validate quality (input modal: review scope, focus areas)
+4. After epic complete: `bmad-retrospective` → Sprint retro (runs from project state, no input)
+
+### 5.3 Named Agents
+
+| Agent | Name | Skill ID | Phase |
+|-------|------|----------|-------|
+| 📊 Business Analyst | Mary | `bmad-analyst` | Analysis |
+| 📚 Technical Writer | Paige | `bmad-tech-writer` | Analysis |
+| 📋 Product Manager | John | `bmad-pm` | Planning |
+| 🎨 UX Designer | Sally | `bmad-ux-designer` | Planning |
+| 🏗️ Architect | Winston | `bmad-architect` | Solutioning |
+| 💻 Developer | Amelia | `bmad-agent-dev` | Implementation |
+
+### 5.4 Fresh Chat Per Workflow
+
+BMad mandates starting a fresh chat for each workflow. The app implements this via the `[NEW_CONTEXT]` reset marker and per-workflow context windows.
+
+### 5.5 Input Modal System
+
+Actions that require user context show a popup input form **before** calling `bmad_orchestrate`:
+
+| Skill | Required Input |
+|-------|---------------|
+| `bmad-product-brief` | Product name, problem statement, target user, key features |
+| `bmad-arch` | Preferred stack, constraints, scale requirements |
+| `bmad-ux` | Target audience, design style, key user flows |
+| `bmad-story` | Epic, actor, need, value, constraints |
+| `bmad-dev-story` | Story slug, implementation notes |
+| `bmad-code-review` | Review scope, focus areas |
+| `bmad-quick-dev` | Intent description |
+
+Skills that run from project state alone (`bmad-sprint-plan`, `bmad-retro`, `bmad-gate-check`, `bmad-tech-writer`) fire immediately without input.
+
+---
+
+## 6. Features
 
 ### 5.1 Dashboard View (Home)
 
@@ -408,6 +460,10 @@ Returns full project state for the dashboard view.
 ### 9.2 `bmad_orchestrate`
 
 Triggers a BMad skill via **MCP Sampling** (`createMessage`). The server delegates to the host LLM as a sub-agent, maintaining a persistent context window per workflow.
+
+**Input collection:** Skills that require user context (e.g., `bmad-story`, `bmad-product-brief`, `bmad-arch`, `bmad-ux`, `bmad-dev-story`, `bmad-code-review`, `bmad-quick-dev`) trigger an **InputModal** popup in the UI before calling the tool. The modal collects relevant fields (actor, need, constraints, etc.) and passes them as `context` to the orchestrate call. Skills that run from project state alone (e.g., `bmad-sprint-plan`, `bmad-retro`, `bmad-gate-check`) fire immediately without user input.
+
+**Fresh context per invocation:** Following BMad's "always start a fresh chat for each workflow" principle, each skill invocation operates in its workflow's context window. The `[NEW_CONTEXT]` marker resets it.
 
 **Input:**
 ```json

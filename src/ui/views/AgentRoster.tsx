@@ -5,9 +5,10 @@ import { AgentCard } from '../components/AgentCard';
 interface AgentRosterProps {
   callTool: (name: string, args: any) => Promise<any>;
   callToolWithResult?: (name: string, args: any) => Promise<any>;
+  triggerSkill: (skill: string, triggerCode: string, extraContext?: Record<string, string>) => void;
 }
 
-export function AgentRoster({ callTool, callToolWithResult }: AgentRosterProps) {
+export function AgentRoster({ callTool, callToolWithResult, triggerSkill }: AgentRosterProps) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -22,7 +23,7 @@ export function AgentRoster({ callTool, callToolWithResult }: AgentRosterProps) 
   }, [callTool]);
 
   const handleLaunch = (agent: Agent, code: string) => {
-    (callToolWithResult || callTool)('bmad_orchestrate', { skill: agent.skillId, triggerCode: code });
+    triggerSkill(agent.skillId, code);
   };
 
   if (loading) {

@@ -7,20 +7,17 @@ interface PhaseViewProps {
   phase: Phase;
   projectState: ProjectState | null;
   callTool: (name: string, args: any) => Promise<any>;
+  triggerSkill: (skill: string, triggerCode: string, extraContext?: Record<string, string>) => void;
 }
 
-export function PhaseView({ phase, projectState, callTool }: PhaseViewProps) {
+export function PhaseView({ phase, projectState, callTool, triggerSkill }: PhaseViewProps) {
   const docs = projectState?.documents || { prd: false, architecture: false, uxSpec: false, projectContext: false };
-
-  const triggerSkill = (skill: string, triggerCode: string) => {
-    callTool('bmad_orchestrate', { skill, triggerCode });
-  };
 
   const triggerWithModel = (skill: string, triggerCode: string) => {
     const model = localStorage.getItem('bmad-preferred-model') || 'Default';
-    const args: any = { skill, triggerCode };
-    if (model !== 'Default') args.preferredModel = model;
-    callTool('bmad_orchestrate', args);
+    const extra: Record<string, string> = {};
+    if (model !== 'Default') extra.preferredModel = model;
+    triggerSkill(skill, triggerCode, extra);
   };
 
   const renderStatus = (exists: boolean) => (

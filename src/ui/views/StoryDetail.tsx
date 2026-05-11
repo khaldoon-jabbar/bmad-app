@@ -11,30 +11,24 @@ interface StoryDetailProps {
   projectState: ProjectState | null;
   navigate: (view: ViewId, params?: Record<string, string>) => void;
   callTool: (name: string, args: any) => Promise<any>;
+  triggerSkill: (skill: string, triggerCode: string, extraContext?: Record<string, string>) => void;
 }
 
-export function StoryDetail({ slug, projectState, navigate, callTool }: StoryDetailProps) {
+export function StoryDetail({ slug, projectState, navigate, callTool, triggerSkill }: StoryDetailProps) {
   const story = projectState?.epics.flatMap(e => e.stories).find(s => s.slug === slug);
 
   if (!story) return <div className="p-6 text-red-500">Story not found</div>;
 
-  const getPreferredModel = () => {
-    try { return localStorage.getItem('bmad-preferred-model') || 'Default'; } catch { return 'Default'; }
-  };
-
   const handleStartStory = () => {
-    callTool('bmad_orchestrate', { skill: '/bmad-dev-story', triggerCode: 'DS', context: { storySlug: story.slug, epicId: story.epicId } });
+    triggerSkill('/bmad-dev-story', 'DS', { storySlug: story.slug, epicId: story.epicId });
   };
 
   const handleCodeReview = () => {
-    const model = getPreferredModel();
-    const args: any = { skill: '/bmad-code-review', triggerCode: 'CR', context: { storySlug: story.slug, epicId: story.epicId } };
-    if (model !== 'Default') args.preferredModel = model;
-    callTool('bmad_orchestrate', args);
+    triggerSkill('/bmad-code-review', 'CR', { storySlug: story.slug, epicId: story.epicId });
   };
 
   const handleDevStory = () => {
-    callTool('bmad_orchestrate', { skill: '/bmad-dev-story', triggerCode: 'DS', context: { storySlug: story.slug, epicId: story.epicId } });
+    triggerSkill('/bmad-dev-story', 'DS', { storySlug: story.slug, epicId: story.epicId });
   };
 
   return (

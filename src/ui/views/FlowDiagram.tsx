@@ -8,6 +8,7 @@ import { ActionButton } from '../components/ActionButton';
 interface FlowDiagramProps {
   callTool: (name: string, args: any) => Promise<any>;
   callToolWithResult?: (name: string, args: any) => Promise<any>;
+  triggerSkill: (skill: string, triggerCode: string, extraContext?: Record<string, string>) => void;
 }
 
 const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
@@ -48,7 +49,7 @@ const STATUS_COLORS: Record<FlowNodeStatus, { bg: string; border: string }> = {
   pending: { bg: '#374151', border: '#4b5563' },
 };
 
-function FlowContent({ callTool, callToolWithResult }: FlowDiagramProps) {
+function FlowContent({ callTool, callToolWithResult, triggerSkill }: FlowDiagramProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [track, setTrack] = useState<Track>('bmad');
@@ -101,7 +102,7 @@ function FlowContent({ callTool, callToolWithResult }: FlowDiagramProps) {
         TW: '/bmad-tech-writer', RT: '/bmad-retro', GC: '/bmad-gate-check',
       };
       const skill = skillMap[flowNode.triggerCode] || `/bmad-${flowNode.id}`;
-      (callToolWithResult || callTool)('bmad_orchestrate', { skill, triggerCode: flowNode.triggerCode });
+      triggerSkill(skill, flowNode.triggerCode);
     }
   };
 

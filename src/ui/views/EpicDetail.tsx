@@ -11,9 +11,10 @@ interface EpicDetailProps {
   projectState: ProjectState | null;
   navigate: (view: ViewId, params?: Record<string, string>) => void;
   callTool: (name: string, args: any) => Promise<any>;
+  triggerSkill: (skill: string, triggerCode: string, extraContext?: Record<string, string>) => void;
 }
 
-export function EpicDetail({ epicId, projectState, navigate, callTool }: EpicDetailProps) {
+export function EpicDetail({ epicId, projectState, navigate, callTool, triggerSkill }: EpicDetailProps) {
   const epic = projectState?.epics.find(e => e.id === epicId);
 
   if (!epic) return <div className="p-6 text-red-500">Epic not found</div>;
@@ -32,8 +33,8 @@ export function EpicDetail({ epicId, projectState, navigate, callTool }: EpicDet
           <span className="text-gray-400 font-mono text-sm">{epic.id}</span>
         </div>
         <div className="flex gap-2">
-          <ActionButton onClick={() => callTool('bmad_orchestrate', { skill: '/bmad-story', triggerCode: 'CS', context: { epicId: epic.id } })}>Create Next Story</ActionButton>
-          <ActionButton variant="secondary" onClick={() => callTool('bmad_orchestrate', { skill: '/bmad-retro', triggerCode: 'RT', context: { epicId: epic.id } })}>Run Retrospective</ActionButton>
+          <ActionButton onClick={() => triggerSkill('/bmad-story', 'CS', { epicId: epic.id })}>Create Next Story</ActionButton>
+          <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-retro', 'RT', { epicId: epic.id })}>Run Retrospective</ActionButton>
         </div>
       </div>
 
