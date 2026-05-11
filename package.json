@@ -15,6 +15,7 @@
     "build": "tsc --noEmit && vite build",
     "build:server": "tsc -p tsconfig.server.json && node -e \"const fs=require('fs');const p='dist/server/server/cli.js';const c=fs.readFileSync(p,'utf8');if(!c.startsWith('#!'))fs.writeFileSync(p,'#!/usr/bin/env node\\n'+c);fs.chmodSync(p,0o755)\"",
     "prepublishOnly": "npm run build:server && npm run build",
+    "prepare": "npm run build:server && npm run build",
     "dev": "vite",
     "lint": "tsc --noEmit",
     "start": "node dist/server/index.js"
