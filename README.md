@@ -1,0 +1,1 @@
+# BMad App\n\nVisual MCP App for managing BMad Method projects.\n\n## Overview\n\nAn interactive MCP App that renders inline inside MCP hosts (Claude Desktop, VS Code Copilot, etc.) providing a visual dashboard for BMad Method-driven projects — sprint tracking, epic/story management, phase orchestration, and quick-mode development.\n\n## License\n\nMIT
