@@ -150,7 +150,7 @@ registerAppTool(server,
   async ({ message }) => {
     const sampling = { createMessage: (params: any) => server.server.createMessage(params) };
     try {
-      const prompt = `Execute BMad skill "/bmad-help". User question: ${message}`;
+      const prompt = `/bmad-help ${message}`;
       const responseText = await contextManager.sample('help', prompt, sampling.createMessage);
       return { content: [{ type: 'text', text: JSON.stringify({ role: 'assistant', content: responseText, timestamp: Date.now() }) }] };
     } catch {
