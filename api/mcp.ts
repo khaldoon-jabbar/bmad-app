@@ -104,8 +104,6 @@ function createServer() {
   return server;
 }
 
-const sessions = new Map();
-
 export default async function handler(req: any, res: any) {
   // CORS for MCP clients
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -118,38 +116,23 @@ export default async function handler(req: any, res: any) {
     return;
   }
 
-  const sessionId = req.headers['mcp-session-id'];
-
   if (req.method === 'GET') {
-    if (!sessionId || !sessions.has(sessionId)) {
-      // Bare GET — return server metadata for discoverability
-      res.status(200).json({
-        name: 'bmad-app',
-        version: '1.0.0',
-        description: 'BMad Method Visual Management MCP Server',
-        tools: ['bmad_dashboard', 'bmad_orchestrate', 'bmad_quick', 'bmad_docs', 'bmad_agents', 'bmad_flow', 'bmad_parallel'],
-        usage: 'POST to this endpoint to initialize an MCP session',
-      });
-      return;
-    }
-    const session = sessions.get(sessionId);
-    await session.transport.handleRequest(req, res);
+    res.status(200).json({
+      name: 'bmad-app',
+      version: '1.0.0',
+      description: 'BMad Method Visual Management MCP Server',
+      tools: ['bmad_dashboard', 'bmad_orchestrate', 'bmad_quick', 'bmad_docs', 'bmad_agents', 'bmad_flow', 'bmad_parallel'],
+      usage: 'POST to this endpoint to initialize an MCP session',
+    });
     return;
   }
 
   if (req.method === 'POST') {
-    if (sessionId && sessions.has(sessionId)) {
-      const session = sessions.get(sessionId);
-      await session.transport.handleRequest(req, res);
-      return;
-    }
-
+    // Stateless mode: each request gets a fresh server+transport
+    // Vercel functions don't persist memory between invocations
     const server = createServer();
     const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => crypto.randomUUID(),
-      onsessioninitialized: (id: string) => {
-        sessions.set(id, { server, transport });
-      },
+      sessionIdGenerator: undefined, // stateless — no session tracking
     });
 
     await server.connect(transport);
@@ -158,13 +141,7 @@ export default async function handler(req: any, res: any) {
   }
 
   if (req.method === 'DELETE') {
-    if (sessionId && sessions.has(sessionId)) {
-      const session = sessions.get(sessionId);
-      await session.transport.handleRequest(req, res);
-      sessions.delete(sessionId);
-      return;
-    }
-    res.status(404).json({ error: 'Session not found' });
+    res.status(200).end();
     return;
   }
 
