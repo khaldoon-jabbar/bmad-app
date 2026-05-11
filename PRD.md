@@ -6,7 +6,7 @@
 
 **Trigger:** `/bmad-app`
 
-**Core value proposition:** Make BMad Method accessible to developers who want visual feedback, guided orchestration, and at-a-glance project status — while the actual work is done by BMad skills/agents.
+**Core value proposition:** Unleash the full power of the BMad Method visually. The app doesn't just display status — it makes the method *tangible*. Developers see the entire flow, feel momentum through progress visualization, and trigger any BMad skill with a click. The method becomes intuitive instead of something you study — the app *is* the method, experienced visually.
 
 ---
 
@@ -61,8 +61,9 @@ bmad-app/
 │   │   │   ├── SprintBoard.tsx    # Kanban-style sprint view
 │   │   │   ├── EpicDetail.tsx     # Epic drill-down
 │   │   │   ├── StoryDetail.tsx    # Story detail + actions
-│   │   │   ├── QuickMode.tsx      # Quick dev interface
-│   │   │   └── DocsView.tsx       # Project documentation
+│   │   │   └── QuickMode.tsx      # Quick dev interface
+│   │   ├── overlays/
+│   │   │   └── DocsOverlay.tsx    # Docs modal (on-demand action)
 │   │   ├── components/
 │   │   │   ├── ProgressBar.tsx
 │   │   │   ├── PhaseIndicator.tsx
@@ -196,16 +197,17 @@ Simplified interface for small tasks (Quick Flow track):
 - "Go" button → triggers `bmad-quick-dev`
 - Shows result inline when complete
 
-### 5.7 Documentation View
+### 5.7 Documentation (Action, Not View)
 
-Browse project documents:
+Documentation is **not** a permanent tab or view — it's an action the user chooses to take. Accessible via a "📄 Docs" action button on the dashboard or a command palette entry. When triggered, it opens an overlay/modal showing:
+
 - PRD.md (rendered)
 - architecture.md (rendered)
 - UX spec (rendered)
 - project-context.md (rendered)
 - Any custom docs from `_bmad-output/`
 
-Searchable and navigable.
+Searchable and navigable. Dismissed to return to the active view. The point: docs are reference material you pull up when needed, not a destination that competes with the action-oriented views.
 
 ---
 
