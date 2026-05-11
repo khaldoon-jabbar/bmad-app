@@ -55,6 +55,7 @@ export interface BmadConfig {
 }
 
 export interface ProjectState {
+  initialized: boolean;
   track: Track | null;
   phase: Phase | null;
   documents: {
@@ -137,6 +138,18 @@ export interface OrchestrateInput {
   skill: string;
   triggerCode: string;
   context?: { storySlug?: string; epicId?: string };
+  preferredModel?: string;
+}
+
+export interface HelpMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+}
+
+export interface HelpInput {
+  message: string;
+  history?: HelpMessage[];
 }
 
 export interface OrchestrateOutput {

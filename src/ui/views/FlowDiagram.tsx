@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ReactFlow, ReactFlowProvider, Controls, MiniMap, Background, useNodesState, useEdgesState, Panel, Node, Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import dagre from '@dagrejs/dagre';
-import { Track, FlowGraph, FlowNodeStatus } from '../../shared/types';
+import { Track, FlowGraph, FlowNode as FlowNodeType, FlowNodeStatus } from '../../shared/types';
 import { ActionButton } from '../components/ActionButton';
 
 interface FlowDiagramProps {
@@ -52,12 +52,14 @@ function FlowContent({ callTool }: FlowDiagramProps) {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [track, setTrack] = useState<Track>('bmad');
   const [loading, setLoading] = useState(false);
+  const [flowData, setFlowData] = useState<FlowNodeType[]>([]);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
     callTool('bmad_flow', { track }).then((res: FlowGraph) => {
       if (!active || !res || !res.nodes) return;
+      setFlowData(res.nodes);
       const rfNodes = res.nodes.map(n => ({
         id: n.id,
         data: { label: n.label },
@@ -85,6 +87,20 @@ function FlowContent({ callTool }: FlowDiagramProps) {
     return () => { active = false; };
   }, [track, callTool, setNodes, setEdges]);
 
+  const onNodeClick = (_: any, node: Node) => {
+    const flowNode = flowData.find(n => n.id === node.id);
+    if (flowNode?.triggerCode) {
+      const skillMap: Record<string, string> = {
+        PB: '/bmad-product-brief', CA: '/bmad-arch', UX: '/bmad-ux',
+        SP: '/bmad-sprint-plan', CS: '/bmad-story', DS: '/bmad-dev-story',
+        CR: '/bmad-code-review', QD: '/bmad-quick-dev', TW: '/bmad-tech-writer',
+        RT: '/bmad-retro', GC: '/bmad-gate-check',
+      };
+      const skill = skillMap[flowNode.triggerCode] || `/bmad-${flowNode.id}`;
+      callTool('bmad_orchestrate', { skill, triggerCode: flowNode.triggerCode });
+    }
+  };
+
   return (
     <div className="w-full h-full">
       {loading && <div className="absolute top-4 right-4 z-10 text-gray-400 text-sm">Loading flow...</div>}
@@ -93,6 +109,7 @@ function FlowContent({ callTool }: FlowDiagramProps) {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeClick={onNodeClick}
         fitView
       >
         <Panel position="top-left" className="bg-gray-800 p-2 rounded flex gap-2 border border-gray-700">

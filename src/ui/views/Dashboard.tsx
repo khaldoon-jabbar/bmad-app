@@ -8,9 +8,11 @@ import { ActionButton } from '../components/ActionButton';
 interface DashboardProps {
   projectState: ProjectState | null;
   navigate: (view: ViewId, params?: Record<string, string>) => void;
+  callTool: (name: string, args: any) => Promise<any>;
 }
 
 const mockState: ProjectState = {
+  initialized: true,
   track: 'bmad',
   phase: 'analysis',
   documents: { prd: true, architecture: false, uxSpec: false, projectContext: true },
@@ -22,19 +24,23 @@ const mockState: ProjectState = {
   recentActions: [],
 };
 
-export function Dashboard({ projectState, navigate }: DashboardProps) {
+export function Dashboard({ projectState, navigate, callTool }: DashboardProps) {
   const state = projectState || mockState;
-  
+
+  const triggerSkill = (skill: string, triggerCode: string) => {
+    callTool('bmad_orchestrate', { skill, triggerCode });
+  };
+
   const getNextAction = () => {
-    if (!state.documents.prd) return { label: 'Create PRD', action: () => navigate('docs') };
-    if (!state.documents.architecture) return { label: 'Create Architecture', action: () => navigate('docs') };
-    if (state.epics.length === 0) return { label: 'Create Epics', action: () => navigate('sprint-board') };
-    if (!state.sprint || state.sprint.status !== 'active') return { label: 'Start Sprint', action: () => navigate('sprint-board') };
-    return { label: 'Pick Next Story', action: () => navigate('sprint-board') };
+    if (!state.documents.prd) return { label: 'Create PRD', skill: '/bmad-product-brief', code: 'PB' };
+    if (!state.documents.architecture) return { label: 'Define Architecture', skill: '/bmad-arch', code: 'CA' };
+    if (!state.documents.uxSpec) return { label: 'Create UX Design', skill: '/bmad-ux', code: 'UX' };
+    if (state.epics.length === 0) return { label: 'Plan Sprint', skill: '/bmad-sprint-plan', code: 'SP' };
+    if (!state.sprint || state.sprint.status !== 'active') return { label: 'Plan Sprint', skill: '/bmad-sprint-plan', code: 'SP' };
+    return { label: 'Start Dev Story', skill: '/bmad-dev-story', code: 'DS' };
   };
 
   const nextAction = getNextAction();
-
   const totalStories = state.epics.flatMap(e => e.stories).length;
   const doneStories = state.epics.flatMap(e => e.stories).filter(s => s.status === 'done').length;
   const sprintProgress = totalStories ? (doneStories / totalStories) * 100 : 0;
@@ -42,12 +48,12 @@ export function Dashboard({ projectState, navigate }: DashboardProps) {
   return (
     <div className="p-6 flex flex-col gap-6">
       <PhaseIndicator currentPhase={state.phase} onPhaseClick={(p) => navigate('phase', { phase: p })} />
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
           <h2 className="text-xl font-bold mb-2">{state.config?.projectName || 'Unnamed Project'}</h2>
           <div className="text-gray-400 text-sm mb-4">Track: <span className="uppercase text-gray-300">{state.track}</span></div>
-          <ActionButton onClick={nextAction.action} className="w-full text-lg py-3">{nextAction.label}</ActionButton>
+          <ActionButton onClick={() => triggerSkill(nextAction.skill, nextAction.code)} className="w-full text-lg py-3">{nextAction.label}</ActionButton>
         </div>
 
         <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
@@ -57,6 +63,23 @@ export function Dashboard({ projectState, navigate }: DashboardProps) {
             <span>{doneStories}/{totalStories} stories done</span>
           </div>
           <ProgressBar progress={sprintProgress} status={sprintProgress === 100 ? 'done' : 'active'} />
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-bold mb-4 text-gray-100">Quick Actions</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-product-brief', 'PB')}>Create PRD</ActionButton>
+          <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-arch', 'CA')}>Define Architecture</ActionButton>
+          <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-ux', 'UX')}>Create UX Design</ActionButton>
+          <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-sprint-plan', 'SP')}>Plan Sprint</ActionButton>
+          <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-story', 'CS')}>Create Story</ActionButton>
+          <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-dev-story', 'DS')}>Start Dev Story</ActionButton>
+          <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-quick-dev', 'QD')}>Quick Dev</ActionButton>
+          <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-tech-writer', 'TW')}>Generate Docs</ActionButton>
+          <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-retro', 'RT')}>Run Retrospective</ActionButton>
+          <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-gate-check', 'GC')}>Validate Phase Gate</ActionButton>
+          <ActionButton variant="secondary" onClick={() => triggerSkill('/bmad-code-review', 'CR')}>Code Review</ActionButton>
         </div>
       </div>
 
@@ -79,6 +102,7 @@ export function Dashboard({ projectState, navigate }: DashboardProps) {
           })}
         </div>
       </div>
+
       <div>
         <h2 className="text-xl font-bold mb-4 text-gray-100">Recent Activity</h2>
         <div className="bg-gray-800 rounded-lg border border-gray-700 divide-y divide-gray-700">

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useBmadApp } from './hooks/useApp';
 import { ViewId } from '../shared/types';
 import { Dashboard } from './views/Dashboard';
@@ -11,6 +11,9 @@ import { DocsView } from './views/DocsView';
 import { AgentRoster } from './views/AgentRoster';
 import { FlowDiagram } from './views/FlowDiagram';
 import { ParallelView } from './views/ParallelView';
+import { InitView } from './views/InitView';
+import { HelpButton } from './components/HelpButton';
+import { HelpChat } from './components/HelpChat';
 import { useHostStyles } from '@modelcontextprotocol/ext-apps/react';
 
 const MENU_ITEMS: { id: ViewId; label: string; icon: string }[] = [
@@ -24,7 +27,8 @@ const MENU_ITEMS: { id: ViewId; label: string; icon: string }[] = [
 ];
 
 export function App() {
-  const { app, isConnected, isLoading, projectState, callTool, navState, navigate } = useBmadApp();
+  const { app, isConnected, isLoading, projectState, callTool, navState, navigate, refreshState } = useBmadApp();
+  const [helpOpen, setHelpOpen] = useState(false);
   useHostStyles(app, app?.getHostContext());
 
   if (!isConnected) {
@@ -38,10 +42,20 @@ export function App() {
     );
   }
 
+  if (projectState && !projectState.initialized) {
+    return (
+      <div className="min-h-[800px] w-full bg-gray-900 text-gray-100">
+        <InitView callTool={callTool} onInitComplete={refreshState} />
+        <HelpButton onClick={() => setHelpOpen(true)} />
+        <HelpChat isOpen={helpOpen} onClose={() => setHelpOpen(false)} callTool={callTool} />
+      </div>
+    );
+  }
+
   const renderView = () => {
     switch (navState.view) {
-      case 'dashboard': return <Dashboard projectState={projectState} navigate={navigate} />;
-      case 'phase': return <PhaseView phase={navState.params?.phase as any} projectState={projectState} />;
+      case 'dashboard': return <Dashboard projectState={projectState} navigate={navigate} callTool={callTool} />;
+      case 'phase': return <PhaseView phase={navState.params?.phase as any} projectState={projectState} callTool={callTool} />;
       case 'sprint-board': return <SprintBoard projectState={projectState} navigate={navigate} />;
       case 'epic-detail': return <EpicDetail epicId={navState.params?.id || ''} projectState={projectState} navigate={navigate} />;
       case 'story-detail': return <StoryDetail slug={navState.params?.slug || ''} projectState={projectState} navigate={navigate} callTool={callTool} />;
@@ -50,7 +64,7 @@ export function App() {
       case 'agent-roster': return <AgentRoster callTool={callTool} />;
       case 'flow-diagram': return <FlowDiagram callTool={callTool} />;
       case 'parallel': return <ParallelView callTool={callTool} />;
-      default: return <Dashboard projectState={projectState} navigate={navigate} />;
+      default: return <Dashboard projectState={projectState} navigate={navigate} callTool={callTool} />;
     }
   };
 
@@ -83,6 +97,8 @@ export function App() {
       <main className="flex-1 overflow-y-auto bg-gray-900">
         {renderView()}
       </main>
+      <HelpButton onClick={() => setHelpOpen(true)} />
+      <HelpChat isOpen={helpOpen} onClose={() => setHelpOpen(false)} callTool={callTool} />
     </div>
   );
 }

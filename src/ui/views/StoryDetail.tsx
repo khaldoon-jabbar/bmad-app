@@ -2,6 +2,7 @@ import React from 'react';
 import { ProjectState, ViewId } from '../../shared/types';
 import { StatusBadge } from '../components/StatusBadge';
 import { ActionButton } from '../components/ActionButton';
+import { ModelPicker } from '../components/ModelPicker';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -17,16 +18,23 @@ export function StoryDetail({ slug, projectState, navigate, callTool }: StoryDet
 
   if (!story) return <div className="p-6 text-red-500">Story not found</div>;
 
+  const getPreferredModel = () => {
+    try { return localStorage.getItem('bmad-preferred-model') || 'Default'; } catch { return 'Default'; }
+  };
+
   const handleStartStory = () => {
-    callTool('bmad_orchestrate', { skill: 'bmad-agent-dev', triggerCode: 'DS', context: { storySlug: story.slug, epicId: story.epicId } });
+    callTool('bmad_orchestrate', { skill: '/bmad-dev-story', triggerCode: 'DS', context: { storySlug: story.slug, epicId: story.epicId } });
   };
 
   const handleCodeReview = () => {
-    callTool('bmad_orchestrate', { skill: 'bmad-agent-dev', triggerCode: 'CR', context: { storySlug: story.slug, epicId: story.epicId } });
+    const model = getPreferredModel();
+    const args: any = { skill: '/bmad-code-review', triggerCode: 'CR', context: { storySlug: story.slug, epicId: story.epicId } };
+    if (model !== 'Default') args.preferredModel = model;
+    callTool('bmad_orchestrate', args);
   };
 
   const handleDevStory = () => {
-    callTool('bmad_orchestrate', { skill: 'bmad-agent-dev', triggerCode: 'DS', context: { storySlug: story.slug, epicId: story.epicId } });
+    callTool('bmad_orchestrate', { skill: '/bmad-dev-story', triggerCode: 'DS', context: { storySlug: story.slug, epicId: story.epicId } });
   };
 
   return (
@@ -41,10 +49,11 @@ export function StoryDetail({ slug, projectState, navigate, callTool }: StoryDet
             {story.epicId}
           </span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           {story.status === 'draft' && <ActionButton onClick={handleStartStory}>Start Story</ActionButton>}
           {story.status === 'in-progress' && <ActionButton onClick={handleCodeReview}>Code Review</ActionButton>}
           <ActionButton variant="secondary" onClick={handleDevStory}>Dev Story</ActionButton>
+          <ModelPicker />
         </div>
       </div>
 
