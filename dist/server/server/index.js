@@ -96,7 +96,7 @@ server.registerTool('bmad_parallel', {
     return { content: [{ type: 'text', text: JSON.stringify(result) }] };
 });
 server.registerResource('BMad Dashboard', UI_RESOURCE_URI, { mimeType: UI_MIME_TYPE }, async () => {
-    const htmlPath = path.join(import.meta.dirname, '../../dist/ui/index.html');
+    const htmlPath = path.join(import.meta.dirname, '../../ui/index.html');
     const html = await fs.readFile(htmlPath, 'utf-8');
     return { contents: [{ uri: UI_RESOURCE_URI, mimeType: UI_MIME_TYPE, text: html }] };
 });
