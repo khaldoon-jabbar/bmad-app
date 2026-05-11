@@ -59,7 +59,8 @@ server.registerTool(
     _meta: { ui: { resourceUri: UI_RESOURCE_URI } },
   },
   async (args) => {
-    const result = await handleQuickMode(args);
+    const sampling = { createMessage: (params: any) => server.server.createMessage(params) };
+    const result = await handleQuickMode(args, sampling);
     return { content: [{ type: 'text', text: JSON.stringify(result) }] };
   },
 );

@@ -46,6 +46,26 @@ function checkPhaseGate(triggerCode: string, state: ProjectState): PhaseGateResu
   return { allowed: true, missingPrerequisites: [], message: 'All prerequisites met' };
 }
 
+const SKILL_PROMPTS: Record<string, string> = {
+  'bmad-pm': 'You are the BMad PM agent. Analyze the current project status including sprint progress, epic completion, story statuses, and any blockers. Provide a concise status report with actionable next steps.',
+  'bmad-arch': 'You are the BMad Architect agent. Review the current architecture decisions, identify technical debt, evaluate design patterns in use, and suggest improvements. Focus on maintainability, scalability, and alignment with the PRD.',
+  'bmad-dev': 'You are the BMad Developer agent. Check implementation status across active stories, assess code quality patterns, identify incomplete work, and report on development velocity and any technical blockers.',
+  'bmad-help': 'You are the BMad Help agent. Answer the user\'s question about the BMad Method clearly and concisely, referencing relevant phases, artifacts, and best practices.',
+  'initialize-bmad': 'You are the BMad Initialization agent. Set up a new BMad project structure. Create the initial epic and story hierarchy, establish sprint cadence, and ensure all required project documents (PRD, architecture) are scaffolded.',
+};
+
+function getSkillPrompt(skill: string, triggerCode: string, context?: Record<string, string | undefined>, preferredModel?: string): string {
+  const basePrompt = SKILL_PROMPTS[skill] || `Execute BMad skill "${skill}" following the BMad Method workflow.`;
+  const contextStr = context
+    ? Object.entries(context).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join(', ')
+    : '';
+  const parts = [basePrompt];
+  if (triggerCode) parts.push(`Trigger code: ${triggerCode}.`);
+  if (contextStr) parts.push(`Context: ${contextStr}.`);
+  if (preferredModel) parts.push(`Preferred model: ${preferredModel}.`);
+  return parts.join(' ');
+}
+
 export async function handleOrchestrate(
   input: OrchestrateInput,
   projectPath: string,
@@ -58,13 +78,9 @@ export async function handleOrchestrate(
     return { status: 'blocked', message: gateResult.message, gateResult };
   }
 
-  // If sampling is available, use it to request the host LLM to execute the skill
   if (sampling) {
     try {
-      const contextStr = input.context
-        ? Object.entries(input.context).map(([k, v]) => `${k}: ${v}`).join(', ')
-        : '';
-      const prompt = `Execute BMad skill "${input.skill}" with trigger code "${input.triggerCode}".${contextStr ? ` Context: ${contextStr}` : ''}${input.preferredModel ? ` Preferred model: ${input.preferredModel}.` : ''} Follow the BMad Method workflow for this step.`;
+      const prompt = getSkillPrompt(input.skill, input.triggerCode, input.context, input.preferredModel);
 
       const samplingResult = await sampling.createMessage({
         messages: [{ role: 'user', content: { type: 'text', text: prompt } }],
@@ -78,7 +94,7 @@ export async function handleOrchestrate(
         message: typeof responseText === 'string' ? responseText : JSON.stringify(responseText),
         gateResult,
       };
-    } catch (e) {
+    } catch {
       // Fall through to basic trigger if sampling fails
     }
   }

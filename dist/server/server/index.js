@@ -43,7 +43,8 @@ server.registerTool('bmad_quick', {
     inputSchema: { intent: z.string() },
     _meta: { ui: { resourceUri: UI_RESOURCE_URI } },
 }, async (args) => {
-    const result = await handleQuickMode(args);
+    const sampling = { createMessage: (params) => server.server.createMessage(params) };
+    const result = await handleQuickMode(args, sampling);
     return { content: [{ type: 'text', text: JSON.stringify(result) }] };
 });
 server.registerTool('bmad_docs', {
