@@ -13,11 +13,26 @@ export function HelpChat({ isOpen, onClose, callTool }: HelpChatProps) {
   const [messages, setMessages] = useState<HelpMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [contextCount, setContextCount] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    if (isOpen) {
+      callTool('bmad_context_status', {}).then((status: any) => {
+        setContextCount(status?.help ?? 0);
+      }).catch(() => {});
+    }
+  }, [isOpen, messages.length, callTool]);
+
+  const handleReset = async () => {
+    await callTool('bmad_reset_context', { workflow: 'help' });
+    setMessages([]);
+    setContextCount(0);
+  };
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -27,11 +42,12 @@ export function HelpChat({ isOpen, onClose, callTool }: HelpChatProps) {
     setInput('');
     setLoading(true);
     try {
-      const result = await callTool('bmad_help', { message: userMsg.content, history: newMessages });
+      const result = await callTool('bmad_help', { message: userMsg.content });
       const assistantMsg: HelpMessage = typeof result === 'object' && result.role
         ? result
         : { role: 'assistant', content: typeof result === 'string' ? result : JSON.stringify(result), timestamp: Date.now() };
       setMessages(prev => [...prev, assistantMsg]);
+      setContextCount(prev => prev + 2);
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.', timestamp: Date.now() }]);
     } finally {
@@ -44,8 +60,16 @@ export function HelpChat({ isOpen, onClose, callTool }: HelpChatProps) {
   return (
     <div className="fixed inset-y-0 right-0 z-40 w-96 bg-gray-800 border-l border-gray-700 flex flex-col shadow-2xl">
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
-        <h2 className="text-lg font-bold text-gray-100">BMad Help</h2>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-200 text-xl">&times;</button>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-bold text-gray-100">BMad Help</h2>
+          {contextCount > 0 && (
+            <span className="text-xs bg-gray-700 text-gray-400 px-2 py-0.5 rounded-full">{contextCount} msgs</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={handleReset} className="text-xs text-gray-400 hover:text-blue-400 border border-gray-600 rounded px-2 py-1">New Chat</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-200 text-xl">&times;</button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">

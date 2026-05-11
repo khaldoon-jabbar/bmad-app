@@ -1,5 +1,6 @@
 import type { OrchestrateInput, OrchestrateOutput, PhaseGateResult, ProjectState } from '../../shared/types.js';
 import { getDashboardState } from './dashboard.js';
+import { contextManager, type WorkflowId } from '../context-manager.js';
 
 interface GateRule {
   requires: Array<(state: ProjectState) => boolean>;
@@ -46,6 +47,14 @@ function checkPhaseGate(triggerCode: string, state: ProjectState): PhaseGateResu
   return { allowed: true, missingPrerequisites: [], message: 'All prerequisites met' };
 }
 
+const SKILL_TO_WORKFLOW: Record<string, WorkflowId> = {
+  'bmad-pm': 'pm',
+  'bmad-arch': 'arch',
+  'bmad-dev': 'dev',
+  'bmad-help': 'help',
+  'initialize-bmad': 'init',
+};
+
 const SKILL_PROMPTS: Record<string, string> = {
   'bmad-pm': 'You are the BMad PM agent. Analyze the current project status including sprint progress, epic completion, story statuses, and any blockers. Provide a concise status report with actionable next steps.',
   'bmad-arch': 'You are the BMad Architect agent. Review the current architecture decisions, identify technical debt, evaluate design patterns in use, and suggest improvements. Focus on maintainability, scalability, and alignment with the PRD.',
@@ -81,17 +90,17 @@ export async function handleOrchestrate(
   if (sampling) {
     try {
       const prompt = getSkillPrompt(input.skill, input.triggerCode, input.context, input.preferredModel);
+      const workflowId = SKILL_TO_WORKFLOW[input.skill] || 'dev';
 
-      const samplingResult = await sampling.createMessage({
-        messages: [{ role: 'user', content: { type: 'text', text: prompt } }],
-        maxTokens: 4096,
-      });
-
-      const responseText = samplingResult?.content?.[0]?.text || samplingResult?.content || 'Skill executed via sampling.';
+      const responseText = await contextManager.sample(
+        workflowId,
+        prompt,
+        sampling.createMessage,
+      );
 
       return {
         status: 'triggered',
-        message: typeof responseText === 'string' ? responseText : JSON.stringify(responseText),
+        message: responseText,
         gateResult,
       };
     } catch {

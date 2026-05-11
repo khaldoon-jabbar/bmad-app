@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ActionButton } from '../components/ActionButton';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -11,6 +11,19 @@ export function QuickMode({ callTool }: QuickModeProps) {
   const [intent, setIntent] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [contextCount, setContextCount] = useState(0);
+
+  useEffect(() => {
+    callTool('bmad_context_status', {}).then((status: any) => {
+      setContextCount(status?.dev ?? 0);
+    }).catch(() => {});
+  }, [result, callTool]);
+
+  const handleReset = async () => {
+    await callTool('bmad_reset_context', { workflow: 'dev' });
+    setContextCount(0);
+    setResult(null);
+  };
 
   const handleGo = async () => {
     if (!intent.trim()) return;
@@ -45,6 +58,13 @@ export function QuickMode({ callTool }: QuickModeProps) {
         />
         <ActionButton onClick={handleGo} loading={loading} className="px-8 text-lg">Go</ActionButton>
       </div>
+
+      {contextCount > 0 && (
+        <div className="w-full flex items-center justify-between">
+          <span className="text-xs text-gray-500">{contextCount} messages in dev context</span>
+          <button onClick={handleReset} className="text-xs text-gray-400 hover:text-blue-400 border border-gray-600 rounded px-2 py-1">Reset Context</button>
+        </div>
+      )}
 
       {result && (
         <div className="w-full mt-6 bg-gray-800 border border-gray-700 rounded-lg p-6 prose prose-invert max-w-none overflow-y-auto max-h-[50vh]">

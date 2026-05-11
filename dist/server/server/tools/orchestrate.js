@@ -1,4 +1,5 @@
 import { getDashboardState } from './dashboard.js';
+import { contextManager } from '../context-manager.js';
 const GATE_RULES = {
     CA: {
         requires: [(s) => s.documents.prd],
@@ -36,6 +37,13 @@ function checkPhaseGate(triggerCode, state) {
     }
     return { allowed: true, missingPrerequisites: [], message: 'All prerequisites met' };
 }
+const SKILL_TO_WORKFLOW = {
+    'bmad-pm': 'pm',
+    'bmad-arch': 'arch',
+    'bmad-dev': 'dev',
+    'bmad-help': 'help',
+    'initialize-bmad': 'init',
+};
 const SKILL_PROMPTS = {
     'bmad-pm': 'You are the BMad PM agent. Analyze the current project status including sprint progress, epic completion, story statuses, and any blockers. Provide a concise status report with actionable next steps.',
     'bmad-arch': 'You are the BMad Architect agent. Review the current architecture decisions, identify technical debt, evaluate design patterns in use, and suggest improvements. Focus on maintainability, scalability, and alignment with the PRD.',
@@ -66,14 +74,11 @@ export async function handleOrchestrate(input, projectPath, sampling) {
     if (sampling) {
         try {
             const prompt = getSkillPrompt(input.skill, input.triggerCode, input.context, input.preferredModel);
-            const samplingResult = await sampling.createMessage({
-                messages: [{ role: 'user', content: { type: 'text', text: prompt } }],
-                maxTokens: 4096,
-            });
-            const responseText = samplingResult?.content?.[0]?.text || samplingResult?.content || 'Skill executed via sampling.';
+            const workflowId = SKILL_TO_WORKFLOW[input.skill] || 'dev';
+            const responseText = await contextManager.sample(workflowId, prompt, sampling.createMessage);
             return {
                 status: 'triggered',
-                message: typeof responseText === 'string' ? responseText : JSON.stringify(responseText),
+                message: responseText,
                 gateResult,
             };
         }

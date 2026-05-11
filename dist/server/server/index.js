@@ -10,6 +10,7 @@ import { handleDocs } from './tools/docs.js';
 import { handleAgents } from './tools/agents.js';
 import { handleFlow } from './tools/flow.js';
 import { handleParallel } from './tools/parallel.js';
+import { contextManager } from './context-manager.js';
 const server = new McpServer({ name: 'bmad-app', version: '1.0.0' });
 const UI_RESOURCE_URI = 'ui://bmad-app/dashboard';
 const UI_MIME_TYPE = 'text/html';
@@ -110,23 +111,36 @@ server.registerTool('bmad_help', {
         })).optional(),
     },
     _meta: { ui: { resourceUri: UI_RESOURCE_URI } },
-}, async ({ message, history }) => {
+}, async ({ message }) => {
     const sampling = { createMessage: (params) => server.server.createMessage(params) };
     try {
-        const historyContext = history?.length
-            ? '\n\nConversation history:\n' + history.map((m) => `${m.role}: ${m.content}`).join('\n')
-            : '';
-        const prompt = `Execute BMad skill "/bmad-help". User question: ${message}${historyContext}`;
-        const result = await sampling.createMessage({
-            messages: [{ role: 'user', content: { type: 'text', text: prompt } }],
-            maxTokens: 4096,
-        });
-        const responseText = result?.content?.[0]?.text || result?.content || 'I can help with BMad Method questions. What would you like to know?';
-        return { content: [{ type: 'text', text: JSON.stringify({ role: 'assistant', content: typeof responseText === 'string' ? responseText : JSON.stringify(responseText), timestamp: Date.now() }) }] };
+        const prompt = `Execute BMad skill "/bmad-help". User question: ${message}`;
+        const responseText = await contextManager.sample('help', prompt, sampling.createMessage);
+        return { content: [{ type: 'text', text: JSON.stringify({ role: 'assistant', content: responseText, timestamp: Date.now() }) }] };
     }
     catch {
         return { content: [{ type: 'text', text: JSON.stringify({ role: 'assistant', content: 'BMad Help is available. Ask me anything about the BMad Method!', timestamp: Date.now() }) }] };
     }
+});
+server.registerTool('bmad_reset_context', {
+    title: 'BMad Reset Context',
+    description: 'Reset a workflow context window to start a fresh conversation',
+    inputSchema: {
+        workflow: z.enum(['help', 'dev', 'pm', 'arch', 'init']),
+    },
+    _meta: { ui: { resourceUri: UI_RESOURCE_URI } },
+}, async ({ workflow }) => {
+    contextManager.reset(workflow);
+    return { content: [{ type: 'text', text: JSON.stringify({ status: 'reset', workflow, message: `Context for "${workflow}" has been cleared.` }) }] };
+});
+server.registerTool('bmad_context_status', {
+    title: 'BMad Context Status',
+    description: 'Get message counts for all active workflow context windows',
+    inputSchema: {},
+    _meta: { ui: { resourceUri: UI_RESOURCE_URI } },
+}, async () => {
+    const status = contextManager.getStatus();
+    return { content: [{ type: 'text', text: JSON.stringify(status) }] };
 });
 server.registerResource('BMad Dashboard', UI_RESOURCE_URI, { mimeType: UI_MIME_TYPE }, async () => {
     const htmlPath = path.join(import.meta.dirname, '../../ui/index.html');
