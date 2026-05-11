@@ -6,7 +6,7 @@
 
 **Trigger:** `/bmad-app`
 
-**Core value proposition:** Unleash the full power of the BMad Method visually. The app doesn't just display status — it makes the method *tangible*. Developers see the entire flow, feel momentum through progress visualization, and trigger any BMad skill with a click. The method becomes intuitive instead of something you study — the app *is* the method, experienced visually.
+**Core value proposition:** Make BMad Method accessible to developers who want visual feedback, guided orchestration, and at-a-glance project status — while the actual work is done by BMad skills/agents.
 
 ---
 
@@ -61,9 +61,10 @@ bmad-app/
 │   │   │   ├── SprintBoard.tsx    # Kanban-style sprint view
 │   │   │   ├── EpicDetail.tsx     # Epic drill-down
 │   │   │   ├── StoryDetail.tsx    # Story detail + actions
-│   │   │   └── QuickMode.tsx      # Quick dev interface
-│   │   ├── overlays/
-│   │   │   └── DocsOverlay.tsx    # Docs modal (on-demand action)
+│   │   │   ├── QuickMode.tsx      # Quick dev interface
+│   │   │   ├── DocsView.tsx       # Project documentation browser
+│   │   │   ├── AgentRoster.tsx    # All 6 agents + capabilities
+│   │   │   └── FlowDiagram.tsx    # Interactive BMad flow diagram
 │   │   ├── components/
 │   │   │   ├── ProgressBar.tsx
 │   │   │   ├── PhaseIndicator.tsx
@@ -197,17 +198,93 @@ Simplified interface for small tasks (Quick Flow track):
 - "Go" button → triggers `bmad-quick-dev`
 - Shows result inline when complete
 
-### 5.7 Documentation (Action, Not View)
+### 5.7 Documentation View
 
-Documentation is **not** a permanent tab or view — it's an action the user chooses to take. Accessible via a "📄 Docs" action button on the dashboard or a command palette entry. When triggered, it opens an overlay/modal showing:
-
+Browse project documents:
 - PRD.md (rendered)
 - architecture.md (rendered)
 - UX spec (rendered)
 - project-context.md (rendered)
 - Any custom docs from `_bmad-output/`
 
-Searchable and navigable. Dismissed to return to the active view. The point: docs are reference material you pull up when needed, not a destination that competes with the action-oriented views.
+Searchable and navigable.
+
+### 5.8 Generate Documentation (Optional Action)
+
+An optional action the user can choose to trigger: invoke **📚 Paige (Tech Writer)** via `bmad-tech-writer` to generate or update project documentation. Available as an action button — not part of the mandatory flow. Supports:
+
+- "Document Project" — full project documentation pass
+- "Write Document" — generate a specific document
+- "Validate Doc" — check an existing document for completeness
+
+### 5.9 Agent Roster View
+
+A dedicated view showing **all 6 BMad agents** with:
+
+| Element | Description |
+|---------|-------------|
+| **Agent Card** | Avatar emoji, name, role, skill ID, which phase they belong to |
+| **Capabilities** | List of trigger codes and what each does (e.g. John → CP: Create PRD, CE: Create Epics) |
+| **Status** | Whether this agent's outputs exist in the project (e.g. Winston shows ✅ if architecture.md exists) |
+| **Launch** | Click any capability to trigger that workflow directly |
+
+Agents shown:
+- 📊 **Mary** — Analyst (Phase 1: Analysis)
+- 📚 **Paige** — Tech Writer (Phase 1: Analysis)
+- 📋 **John** — Product Manager (Phase 2: Planning)
+- 🎨 **Sally** — UX Designer (Phase 2: Planning)
+- 🏗️ **Winston** — Architect (Phase 3: Solutioning)
+- 💻 **Amelia** — Developer (Phase 4: Implementation)
+
+### 5.10 Interactive Flow Diagram
+
+A visual, interactive diagram of the entire BMad Method flow:
+
+- **Phase-level view:** Four phases as a horizontal pipeline, showing the progressive context chain (each phase's outputs feed into the next)
+- **Workflow-level view:** Drill into any phase to see the specific workflows, their inputs/outputs, and which agent runs them
+- **Live state overlay:** Nodes are colored by status (done/active/pending) based on actual project state — the diagram is alive, not static
+- **Click-to-act:** Click any workflow node to trigger it (with phase gate validation)
+- **Dependency arrows:** Show which documents feed into which workflows (PRD → Architecture → Epics → Sprint)
+- **Track selector:** Toggle between Quick Flow / BMad Method / Enterprise tracks to see how the flow differs
+
+```
+Example flow (BMad Method track):
+
+┌──────────┐    ┌──────────┐    ┌──────────────┐    ┌────────────────┐
+│ Analysis │───▶│ Planning │───▶│ Solutioning  │───▶│Implementation  │
+│ (Mary,   │    │ (John,   │    │ (Winston)    │    │ (Amelia)       │
+│  Paige)  │    │  Sally)  │    │              │    │                │
+└──────────┘    └──────────┘    └──────────────┘    └────────────────┘
+     │               │               │                     │
+   Brief           PRD.md      architecture.md       sprint-status
+   PRFAQ          UX spec      epics/ + stories/     story files
+                                                     code + tests
+```
+
+The diagram is rendered with an interactive library (e.g. React Flow / Dagre) — nodes are draggable, zoomable, and clickable.
+
+### 5.11 Parallel Execution
+
+The app supports **parallel execution** of independent tasks:
+
+**Dependency analysis:** When displaying stories or workflows, the app analyzes dependencies and identifies tasks that can run concurrently.
+
+**Parallel triggers:**
+- Stories within the same epic that have no inter-dependencies can be started in parallel (each in its own fresh chat per BMad rules)
+- Independent epics can be worked on simultaneously
+- Phase 2 workflows can run in parallel: PRD creation and UX design can happen concurrently
+- Code reviews can run in parallel with new story development
+
+**Visual indicators:**
+- Stories/tasks that *can* run in parallel get a "⚡ Parallelizable" badge
+- A "Run Parallel" button appears when 2+ independent tasks are available
+- Active parallel tasks shown as a split progress view
+- Dependency graph highlights the critical path vs. parallelizable branches
+
+**Constraints enforced:**
+- Phase gates still apply — can't parallelize across phase boundaries
+- Each parallel task gets its own fresh chat context (BMad requirement)
+- User can set max concurrency (default: 2 parallel tasks)
 
 ---
 
@@ -298,6 +375,7 @@ Each BMad agent gets a recognizable icon:
 | **UI Framework** | React 19 + TypeScript | Ecosystem, hooks for MCP App SDK |
 | **Styling** | Tailwind CSS 4 | Utility-first, dark theme, small bundle |
 | **Charts** | Recharts or lightweight SVG | Progress bars, burndown charts |
+| **Flow Diagrams** | React Flow + Dagre | Interactive workflow/dependency graphs |
 | **Markdown** | react-markdown + remark-gfm | Render BMad documents |
 | **Build** | Vite | Fast builds, single HTML bundle output |
 | **MCP App SDK** | `@modelcontextprotocol/ext-apps` | Official SDK for iframe communication |
@@ -342,6 +420,36 @@ Returns rendered project documentation.
 
 **Input:** `{ document: "prd" | "architecture" | "ux" | "project-context" | "epic" | "story", id?: string }`
 **Output:** `{ content: string, title: string }`
+
+### 9.5 `bmad_agents`
+
+Returns the full agent roster with capabilities and project status.
+
+**Input:** `{ projectPath?: string }`
+**Output:** Array of agent objects with name, role, phase, trigger codes, and output status.
+
+### 9.6 `bmad_flow`
+
+Returns the BMad flow graph for the selected track.
+
+**Input:** `{ track: "quick" | "bmad" | "enterprise", projectPath?: string }`
+**Output:** Flow graph with nodes (workflows), edges (dependencies), and live status per node.
+
+### 9.7 `bmad_parallel`
+
+Analyzes and triggers parallel execution of independent tasks.
+
+**Input:**
+```json
+{
+  "action": "analyze" | "execute",
+  "tasks?": [{ "skill": "string", "triggerCode": "string", "context": {} }],
+  "maxConcurrency?": 2
+}
+```
+**Output:**
+- `analyze`: Returns parallelizable task groups with dependency info
+- `execute`: Triggers tasks in parallel, returns status handles for tracking
 
 ---
 
