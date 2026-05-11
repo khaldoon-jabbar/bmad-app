@@ -26,13 +26,12 @@ export interface ContextWindow {
 }
 declare class ContextManager {
     private windows;
+    private locks;
     getMessageCount(workflowId: WorkflowId): number;
     /**
-     * Append a user message and call createMessage with the full context.
-     * Appends the assistant response to the context afterward.
-     * If the response contains [NEW_CONTEXT], clears the context.
-     *
-     * Returns the assistant response text.
+     * Transactional sampling: only persists messages on success.
+     * Serializes concurrent calls per workflow to prevent interleaving.
+     * Strips [NEW_CONTEXT] marker from returned text.
      */
     sample(workflowId: WorkflowId, userText: string, createMessage: (params: any) => Promise<any>, maxTokens?: number): Promise<string>;
     reset(workflowId: WorkflowId): void;

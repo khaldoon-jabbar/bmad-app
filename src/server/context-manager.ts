@@ -29,17 +29,16 @@ const NEW_CONTEXT_MARKER = '[NEW_CONTEXT]';
 
 class ContextManager {
   private windows = new Map<WorkflowId, ContextWindow>();
+  private locks = new Map<WorkflowId, Promise<void>>();
 
   getMessageCount(workflowId: WorkflowId): number {
     return this.windows.get(workflowId)?.messages.length ?? 0;
   }
 
   /**
-   * Append a user message and call createMessage with the full context.
-   * Appends the assistant response to the context afterward.
-   * If the response contains [NEW_CONTEXT], clears the context.
-   *
-   * Returns the assistant response text.
+   * Transactional sampling: only persists messages on success.
+   * Serializes concurrent calls per workflow to prevent interleaving.
+   * Strips [NEW_CONTEXT] marker from returned text.
    */
   async sample(
     workflowId: WorkflowId,
@@ -47,45 +46,53 @@ class ContextManager {
     createMessage: (params: any) => Promise<any>,
     maxTokens = 4096,
   ): Promise<string> {
-    if (workflowId === 'init') {
-      this.reset(workflowId);
-    }
+    const execute = async (): Promise<string> => {
+      if (workflowId === 'init') {
+        this.reset(workflowId);
+      }
 
-    let window = this.windows.get(workflowId);
-    if (!window) {
-      window = {
-        workflowId,
-        messages: [],
-        createdAt: Date.now(),
-        lastAccessedAt: Date.now(),
-      };
-      this.windows.set(workflowId, window);
-    }
+      let window = this.windows.get(workflowId);
+      if (!window) {
+        window = {
+          workflowId,
+          messages: [],
+          createdAt: Date.now(),
+          lastAccessedAt: Date.now(),
+        };
+        this.windows.set(workflowId, window);
+      }
 
-    window.lastAccessedAt = Date.now();
+      window.lastAccessedAt = Date.now();
 
-    const userMessage: ContextMessage = { role: 'user', content: { type: 'text', text: userText } };
-    window.messages.push(userMessage);
+      const userMessage: ContextMessage = { role: 'user', content: { type: 'text', text: userText } };
+      const messagesWithNew = [...window.messages, userMessage];
 
-    const result = await createMessage({
-      messages: window.messages,
-      maxTokens,
-    });
+      const result = await createMessage({
+        messages: messagesWithNew,
+        maxTokens,
+      });
 
-    const content = result?.content;
-    const rawText = Array.isArray(content)
-      ? content[0]?.text
-      : typeof content === 'string' ? content : content?.text;
-    const text: string = rawText || 'No response.';
+      const content = result?.content;
+      const rawText = Array.isArray(content)
+        ? content[0]?.text
+        : typeof content === 'string' ? content : content?.text;
+      const text: string = rawText || 'No response.';
 
-    const assistantMessage: ContextMessage = { role: 'assistant', content: { type: 'text', text } };
-    window.messages.push(assistantMessage);
+      const assistantMessage: ContextMessage = { role: 'assistant', content: { type: 'text', text } };
+      window.messages.push(userMessage, assistantMessage);
 
-    if (text.includes(NEW_CONTEXT_MARKER)) {
-      this.reset(workflowId);
-    }
+      if (text.includes(NEW_CONTEXT_MARKER)) {
+        this.reset(workflowId);
+        return text.replaceAll(NEW_CONTEXT_MARKER, '').trim();
+      }
 
-    return text;
+      return text;
+    };
+
+    const prev = this.locks.get(workflowId) ?? Promise.resolve();
+    const current = prev.then(execute, execute);
+    this.locks.set(workflowId, current.then(() => {}, () => {}));
+    return current;
   }
 
   reset(workflowId: WorkflowId): void {

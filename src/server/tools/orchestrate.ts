@@ -50,21 +50,34 @@ function checkPhaseGate(triggerCode: string, state: ProjectState): PhaseGateResu
 const SKILL_TO_WORKFLOW: Record<string, WorkflowId> = {
   'bmad-pm': 'pm',
   'bmad-arch': 'arch',
+  'bmad-architect': 'arch',
   'bmad-dev': 'dev',
+  'bmad-dev-story': 'dev',
+  'bmad-agent-dev': 'dev',
   'bmad-help': 'help',
+  'bmad-product-brief': 'init',
   'initialize-bmad': 'init',
 };
 
 const SKILL_PROMPTS: Record<string, string> = {
   'bmad-pm': 'You are the BMad PM agent. Analyze the current project status including sprint progress, epic completion, story statuses, and any blockers. Provide a concise status report with actionable next steps.',
   'bmad-arch': 'You are the BMad Architect agent. Review the current architecture decisions, identify technical debt, evaluate design patterns in use, and suggest improvements. Focus on maintainability, scalability, and alignment with the PRD.',
+  'bmad-architect': 'You are the BMad Architect agent. Review the current architecture decisions, identify technical debt, evaluate design patterns in use, and suggest improvements. Focus on maintainability, scalability, and alignment with the PRD.',
   'bmad-dev': 'You are the BMad Developer agent. Check implementation status across active stories, assess code quality patterns, identify incomplete work, and report on development velocity and any technical blockers.',
+  'bmad-dev-story': 'You are the BMad Developer agent. Check implementation status across active stories, assess code quality patterns, identify incomplete work, and report on development velocity and any technical blockers.',
+  'bmad-agent-dev': 'You are the BMad Developer agent. Check implementation status across active stories, assess code quality patterns, identify incomplete work, and report on development velocity and any technical blockers.',
   'bmad-help': 'You are the BMad Help agent. Answer the user\'s question about the BMad Method clearly and concisely, referencing relevant phases, artifacts, and best practices.',
+  'bmad-product-brief': 'You are the BMad Initialization agent. Set up a new BMad project structure. Create the initial epic and story hierarchy, establish sprint cadence, and ensure all required project documents (PRD, architecture) are scaffolded.',
   'initialize-bmad': 'You are the BMad Initialization agent. Set up a new BMad project structure. Create the initial epic and story hierarchy, establish sprint cadence, and ensure all required project documents (PRD, architecture) are scaffolded.',
 };
 
+function normalizeSkill(skill: string): string {
+  return skill.replace(/^\//, '');
+}
+
 function getSkillPrompt(skill: string, triggerCode: string, context?: Record<string, string | undefined>, preferredModel?: string): string {
-  const basePrompt = SKILL_PROMPTS[skill] || `Execute BMad skill "${skill}" following the BMad Method workflow.`;
+  const normalized = normalizeSkill(skill);
+  const basePrompt = SKILL_PROMPTS[normalized] || `Execute BMad skill "${skill}" following the BMad Method workflow.`;
   const contextStr = context
     ? Object.entries(context).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join(', ')
     : '';
@@ -90,7 +103,8 @@ export async function handleOrchestrate(
   if (sampling) {
     try {
       const prompt = getSkillPrompt(input.skill, input.triggerCode, input.context, input.preferredModel);
-      const workflowId = SKILL_TO_WORKFLOW[input.skill] || 'dev';
+      const normalized = normalizeSkill(input.skill);
+      const workflowId = SKILL_TO_WORKFLOW[normalized] || 'dev';
 
       const responseText = await contextManager.sample(
         workflowId,

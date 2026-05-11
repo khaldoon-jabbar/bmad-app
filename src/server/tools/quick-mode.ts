@@ -1,5 +1,12 @@
 import type { QuickModeInput } from '../../shared/types.js';
-import { contextManager } from '../context-manager.js';
+import { contextManager, type WorkflowId } from '../context-manager.js';
+
+const HELP_PATTERN = /\b(help|how do i|what is|explain|guide|tutorial)\b/i;
+
+function resolveWorkflow(intent: string): WorkflowId {
+  if (HELP_PATTERN.test(intent)) return 'help';
+  return 'dev';
+}
 
 export async function handleQuickMode(
   input: QuickModeInput,
@@ -7,10 +14,13 @@ export async function handleQuickMode(
 ): Promise<{ status: string; message: string }> {
   if (sampling) {
     try {
-      const prompt = `You are BMad Quick Dev mode. The user wants to quickly accomplish the following intent: "${input.intent}". Analyze what's needed, break it into steps if necessary, and provide a clear action plan or direct answer. Be concise and actionable.`;
+      const workflowId = resolveWorkflow(input.intent);
+      const prompt = workflowId === 'help'
+        ? `Execute BMad skill "/bmad-help". User question: ${input.intent}`
+        : `You are BMad Quick Dev mode. The user wants to quickly accomplish the following intent: "${input.intent}". Analyze what's needed, break it into steps if necessary, and provide a clear action plan or direct answer. Be concise and actionable.`;
 
       const responseText = await contextManager.sample(
-        'dev',
+        workflowId,
         prompt,
         sampling.createMessage,
       );

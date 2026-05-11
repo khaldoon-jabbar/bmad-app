@@ -43,6 +43,7 @@ bmad-app/
 ├── src/
 │   ├── server/              # MCP server (Node.js/TypeScript)
 │   │   ├── index.ts         # MCP server entry, tool + resource registration
+│   │   ├── context-manager.ts # Persistent context windows per workflow
 │   │   ├── tools/           # Tool handlers
 │   │   │   ├── dashboard.ts       # Read sprint-status.yaml, epics, stories
 │   │   │   ├── orchestrate.ts     # Trigger BMad skills with correct context
@@ -64,15 +65,17 @@ bmad-app/
 │   │   │   ├── QuickMode.tsx      # Quick dev interface
 │   │   │   ├── DocsView.tsx       # Project documentation browser
 │   │   │   ├── AgentRoster.tsx    # All 6 agents + capabilities
-│   │   │   └── FlowDiagram.tsx    # Interactive BMad flow diagram
+│   │   │   ├── FlowDiagram.tsx    # Interactive BMad flow diagram
+│   │   │   └── ParallelView.tsx   # Parallel execution UI
 │   │   ├── components/
 │   │   │   ├── ProgressBar.tsx
 │   │   │   ├── PhaseIndicator.tsx
 │   │   │   ├── StatusBadge.tsx
 │   │   │   ├── AgentCard.tsx
-│   │   │   └── ActionButton.tsx
+│   │   │   ├── ActionButton.tsx
+│   │   │   └── ToolResultPanel.tsx  # Dismissible modal showing sampling results
 │   │   └── hooks/
-│   │       └── useApp.ts         # MCP App SDK integration
+│   │       └── useApp.ts         # MCP App SDK integration + callToolWithResult
 │   └── shared/
 │       └── types.ts         # Shared types
 ├── package.json
@@ -106,13 +109,22 @@ bmad-app/
 │  │                                               │       │
 │  │  Tools:                                       │       │
 │  │  • bmad_dashboard  → reads project files      │       │
-│  │  • bmad_orchestrate → triggers BMad skills    │       │
-│  │  • bmad_quick      → quick dev flow           │       │
+│  │  • bmad_orchestrate → sampling (sub-agent)    │       │
+│  │  • bmad_quick      → sampling (dev context)   │       │
 │  │  • bmad_docs       → project documentation    │       │
+│  │  • bmad_help       → sampling (help context)  │       │
+│  │                                               │       │
+│  │  Context Manager:                             │       │
+│  │  • pm context   (accumulated messages)        │       │
+│  │  • arch context (accumulated messages)        │       │
+│  │  • dev context  (accumulated messages)        │       │
+│  │  • help context (accumulated messages)        │       │
 │  └──────────────────────┬───────────────────────┘       │
+│                         │ createMessage (sampling)       │
 │                         ↓                                │
-│              BMad Skills (existing)                       │
-│              • bmad-pm, bmad-architect, etc.             │
+│              Host LLM (sub-agent turn)                   │
+│              ↕ Runs BMad skill in fresh context          │
+│              Returns result to server                    │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -395,7 +407,7 @@ Returns full project state for the dashboard view.
 
 ### 9.2 `bmad_orchestrate`
 
-Triggers a BMad skill with correct context.
+Triggers a BMad skill via **MCP Sampling** (`createMessage`). The server delegates to the host LLM as a sub-agent, maintaining a persistent context window per workflow.
 
 **Input:**
 ```json
@@ -405,14 +417,21 @@ Triggers a BMad skill with correct context.
   "context": { "storySlug?": "string", "epicId?": "string" }
 }
 ```
-**Output:** `{ status: "triggered", message: string }`
+**Output:** `{ status: "completed", result: string }` — The actual LLM response from the sub-agent.
+
+**Sampling behavior:**
+- Maps skill → workflow ID (`bmad-pm`→`pm`, `bmad-architect`→`arch`, `bmad-agent-dev`→`dev`)
+- Each workflow maintains its own context window (accumulated messages)
+- Subsequent calls within the same workflow share context (follow-up awareness)
+- Context auto-resets when response contains `[NEW_CONTEXT]` marker
+- `initialize-bmad` always gets a fresh context (one-shot)
 
 ### 9.3 `bmad_quick`
 
-Quick mode — compressed intent-to-code.
+Quick mode — compressed intent-to-code. Routes through the `dev` context window via sampling.
 
 **Input:** `{ intent: string }`
-**Output:** Routes to `bmad-quick-dev` skill.
+**Output:** LLM response from sub-agent (routed through dev context).
 
 ### 9.4 `bmad_docs`
 
@@ -451,9 +470,82 @@ Analyzes and triggers parallel execution of independent tasks.
 - `analyze`: Returns parallelizable task groups with dependency info
 - `execute`: Triggers tasks in parallel, returns status handles for tracking
 
+### 9.8 `bmad_help`
+
+Help queries routed through the persistent `help` context window via sampling.
+
+**Input:** `{ question: string }`
+**Output:** LLM response with BMad method guidance. Context accumulates for follow-up questions.
+
+### 9.9 `bmad_reset_context`
+
+Manually reset a workflow's context window (start fresh conversation).
+
+**Input:** `{ workflow: "help" | "dev" | "pm" | "arch" | "all" }`
+**Output:** `{ status: "reset", workflow: string, previousMessages: number }`
+
+### 9.10 `bmad_context_status`
+
+Returns the current state of all context windows.
+
+**Input:** `{}`
+**Output:** `{ contexts: { [workflowId]: { messageCount: number, lastActivity: timestamp } } }`
+
 ---
 
-## 10. Non-Functional Requirements
+## 10. Context Window Architecture
+
+Each BMad workflow maintains its own persistent context window (in-memory message history). This follows BMad's recommendation that each workflow should have its own context.
+
+### 10.1 Context Manager
+
+```typescript
+// Singleton managing all workflow contexts
+class ContextManager {
+  private contexts: Map<WorkflowId, ContextWindow>;
+
+  sample(workflowId: string, prompt: string): Promise<string> {
+    // 1. Get or create context for this workflow
+    // 2. Append user message to history
+    // 3. Send FULL history to createMessage (sampling)
+    // 4. Append assistant response to history
+    // 5. Check for [NEW_CONTEXT] marker → auto-reset
+    // 6. Return response text
+  }
+
+  reset(workflowId: string): void;
+  status(): Map<string, { messageCount: number }>;
+}
+```
+
+### 10.2 Workflow → Context Mapping
+
+| Workflow | Context ID | Behavior |
+|----------|-----------|----------|
+| bmad-pm | `pm` | Accumulates project management context |
+| bmad-architect | `arch` | Accumulates architecture decisions |
+| bmad-agent-dev | `dev` | Accumulates dev work (stories, reviews) |
+| bmad-help | `help` | Accumulates help Q&A |
+| bmad-quick | `dev` | Shares dev context |
+| initialize-bmad | `init` | Always fresh (one-shot) |
+
+### 10.3 Context Lifecycle
+
+1. **Created** on first tool call for a workflow
+2. **Accumulates** messages across multiple tool calls
+3. **Auto-resets** when LLM response contains `[NEW_CONTEXT]`
+4. **Manually reset** via `bmad_reset_context` tool or UI button
+5. **Lost** on server restart (in-memory, acceptable for stdio transport)
+
+### 10.4 UI Indicators
+
+- Message count badge on each workflow view
+- "New Chat" / "Reset Context" button per view
+- Visual indicator when context is getting large (>20 messages)
+
+---
+
+## 11. Non-Functional Requirements
 
 | Requirement | Target |
 |-------------|--------|
@@ -466,7 +558,7 @@ Analyzes and triggers parallel execution of independent tasks.
 
 ---
 
-## 11. Implementation Plan
+## 12. Implementation Plan
 
 ### Phase 1 — Foundation (Epic 1)
 - MCP server scaffold with tool registration
@@ -500,7 +592,7 @@ Analyzes and triggers parallel execution of independent tasks.
 
 ---
 
-## 12. Success Metrics
+## 13. Success Metrics
 
 | Metric | Target |
 |--------|--------|
@@ -511,7 +603,7 @@ Analyzes and triggers parallel execution of independent tasks.
 
 ---
 
-## 13. Risks & Mitigations
+## 14. Risks & Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
@@ -523,7 +615,7 @@ Analyzes and triggers parallel execution of independent tasks.
 
 ---
 
-## 14. Open Questions
+## 15. Open Questions
 
 1. **Notification on skill completion** — Can the MCP host notify the app when a triggered skill finishes? If not, polling file changes is the fallback.
 2. **Multi-project support** — Should the app support switching between multiple BMad projects? V1 targets single project.
@@ -531,7 +623,7 @@ Analyzes and triggers parallel execution of independent tasks.
 
 ---
 
-## 15. References
+## 16. References
 
 - [BMad Method Documentation](https://docs.bmad-method.org)
 - [MCP Apps Overview](https://modelcontextprotocol.io/extensions/apps/overview)

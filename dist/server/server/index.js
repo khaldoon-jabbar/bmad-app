@@ -104,11 +104,6 @@ server.registerTool('bmad_help', {
     description: 'Chat with BMad Help assistant for guidance on BMad Method',
     inputSchema: {
         message: z.string(),
-        history: z.array(z.object({
-            role: z.enum(['user', 'assistant']),
-            content: z.string(),
-            timestamp: z.number(),
-        })).optional(),
     },
     _meta: { ui: { resourceUri: UI_RESOURCE_URI } },
 }, async ({ message }) => {
